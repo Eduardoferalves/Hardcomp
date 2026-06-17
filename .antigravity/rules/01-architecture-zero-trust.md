@@ -1,0 +1,17 @@
+---
+name: hardcomp-architecture
+description: Força a obediência à arquitetura Zero-Trust, Specification Pattern e separação de responsabilidades B2C.
+---
+
+# Diretrizes de Arquitetura Core (HardComp)
+
+- **Zero-Trust Front-end**: O front-end (SPA) NUNCA aprova hardware. Ele reage visualmente a falhas lógicas de forma proativa (Poka-Yoke) utilizando o dicionário local.
+- **Specification Pattern Limitado**: O motor opera estritamente com validação determinística de Soquete, Chipset, Geração de RAM e Limite de Energia (Soma de TDP <= 80% da Fonte).
+- **Máquina de Estados Global**: É expressamente proibido usar `useState` local para gerir o carrinho de compras. Todo o progresso do usuário no Montador Virtual (inclusive o Cold Start) DEVE ser salvo em um store global (Zustand), sincronizado com `localStorage` e com timestamp ISO 8601 de expiração (7 dias - RNF01).
+- **Internacionalização Obrigatória (i18n)**: Proibido strings em hardcode (como "Select Processor" ou "Error"). Toda a UI deve mapear as chaves do Catálogo Padronizado de Mensagens (MSG-001 a MSG-039). Ex: Violação de TDP deve invocar `MSG-002`.
+- **Otimização de Estado Global (Zustand Selectors)**: É expressamente PROIBIDO extrair o estado desestruturando o hook global diretamente (ex: `const { cpu, motherboard, ram } = useHardCompStore()`). Todo componente deve consumir o estado através de seletores atômicos (ex: `const cpu = useHardCompStore(state => state.selectedCpu)`) para isolar o escopo de renderização.
+- **Memoização de Matriz de Compatibilidade (useMemo)**: Toda lógica de iteração de catálogo, soma de TDP e checagem de regras do Specification Pattern executada no lado do cliente DEVE ser encapsulada em hooks `useMemo` com arrays de dependências estritos. O componente de renderização não deve computar lógica de negócios diretamente no escopo principal de execução.
+- **Contratos de Tipagem Estrita (TypeScript)**: Todas as propriedades de hardware injetadas nos componentes (`ComponentCard`, `InventoryList`) devem seguir interfaces TypeScript imutáveis definidas centralizadamente. Proibido o uso do tipo `any` ou casting forçado (`as any`) em payloads de componentes de hardware.
+- **Arquitetura de Componentes e Composição**: É obrigatório priorizar padrões de composição em detrimento de super-configurações por props (ex: use `<Card><CardHeader>...</CardHeader></Card>` em vez de passar configurações complexas em uma única tag). Componentes complexos com lógica e marcação misturadas devem ser decompostos: use colocação de arquivos, separando sub-componentes apresentacionais, tipos (`types.ts`) e hooks de estado customizados.
+- **Separação de Preocupações (Container vs Presenter)**: Componentes de renderização de catálogo de hardware e listas de inventário devem ser estritamente apresentacionais (puros). Toda a lógica de leitura do store Zustand, despacho de ações e computação de regras do Specification Pattern deve ser delegada a componentes do tipo Container ou encapsulada em hooks isolados.
+- **Fluxo de Desenvolvimento Gated (Spec-Driven)**: Antes de iniciar qualquer refatoração de código estrutural nos arquivos core (`Builder.tsx`, `Wizard.tsx`, `Hub.tsx`), deve ser gerada e validada uma mini-especificação técnica contendo: Objetivo, Impacto em outros arquivos, Alterações de Tipagem TypeScript e Critérios de Sucesso testáveis. Não pule direto para a codificação sem esta validação.

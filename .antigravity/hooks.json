@@ -1,0 +1,26 @@
+{
+  "code-quality-gate": {
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx eslint --fix ${filePath} && npx prettier --write ${filePath}",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx eslint --fix ${filePath} && npx prettier --write ${filePath}",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

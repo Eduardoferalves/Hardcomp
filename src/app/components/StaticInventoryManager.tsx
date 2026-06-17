@@ -12,8 +12,10 @@ import {
   HardDrive,
   Zap
 } from "lucide-react";
+import { useTranslation } from "../lib/i18n";
 
 export function StaticInventoryManager() {
+  const { t } = useTranslation();
   return (
     <div className="w-screen h-screen bg-[#121212] text-white font-sans flex flex-col overflow-hidden relative">
       
@@ -25,14 +27,14 @@ export function StaticInventoryManager() {
             className="group flex items-center gap-2 text-white/50 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors shrink-0"
           >
             <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
-            <span className="text-sm font-medium font-sans">Return to Hub</span>
+            <span className="text-sm font-medium font-sans">{t('inventory.returnHub')}</span>
           </Link>
           <div>
             <h2 className="text-3xl font-bold text-white tracking-tight mb-2 font-sans">
-              Static Inventory Declaration
+              {t('inventory.header.title')}
             </h2>
             <p className="text-white/50 text-sm max-w-3xl leading-relaxed">
-              Input your existing hardware. The validation engine will lock these as read-only <span className="font-mono text-white/70">[STATIC_NODES]</span>, factoring them into power/socket constraints while excluding them from the final cart calculation.
+              {t('inventory.header.subtitleStart')}<span className="font-mono text-white/70">{t('inventory.header.staticNodeLabel')}</span>{t('inventory.header.subtitleEnd')}
             </p>
           </div>
         </div>
@@ -51,14 +53,14 @@ export function StaticInventoryManager() {
                 <LayoutGrid className="w-6 h-6" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-mono text-white/40 mb-1">Motherboard</div>
+                <div className="text-xs font-mono text-white/40 mb-1">{t('inventory.items.motherboard')}</div>
                 <div className="text-lg font-semibold text-white truncate">ASUS ROG Strix B550-F Gaming</div>
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0 px-4 border-r border-white/10">
                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] tracking-wider border border-emerald-500/20">
-                  [STATIC_NODE]
+                  {t('inventory.badges.staticNode')}
                 </span>
-                <span className="font-mono text-white/50 text-sm">$0.00 (Owned)</span>
+                <span className="font-mono text-white/50 text-sm">{t('inventory.badges.ownedValue')}</span>
               </div>
               <button className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-2">
                 <Trash2 className="w-5 h-5" />
@@ -71,14 +73,14 @@ export function StaticInventoryManager() {
                 <Cpu className="w-6 h-6" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-mono text-white/40 mb-1">Processor</div>
+                <div className="text-xs font-mono text-white/40 mb-1">{t('inventory.items.processor')}</div>
                 <div className="text-lg font-semibold text-white truncate">AMD Ryzen 7 5800X</div>
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0 px-4 border-r border-white/10">
                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] tracking-wider border border-emerald-500/20">
-                  [STATIC_NODE]
+                  {t('inventory.badges.staticNode')}
                 </span>
-                <span className="font-mono text-white/50 text-sm">$0.00 (Owned)</span>
+                <span className="font-mono text-white/50 text-sm">{t('inventory.badges.ownedValue')}</span>
               </div>
               <button className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-2">
                 <Trash2 className="w-5 h-5" />
@@ -98,7 +100,7 @@ export function StaticInventoryManager() {
                   <input 
                     type="text" 
                     className="block w-full bg-black/50 border border-[#007BFF]/30 rounded-lg py-3 pl-10 pr-4 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-[#007BFF] font-sans text-sm"
-                    placeholder="Searching: Corsair Vengeance..."
+                    placeholder={t('inventory.search.placeholder')}
                     defaultValue="Corsair Vengeance"
                     autoFocus
                   />
@@ -113,14 +115,14 @@ export function StaticInventoryManager() {
                       <div className="text-sm font-semibold text-white group-hover:text-[#007BFF] transition-colors">Corsair Vengeance LPX 32GB (2 x 16GB) DDR4-3600</div>
                       <div className="text-xs font-mono text-white/40">CMK32GX4M2D3600C18</div>
                     </div>
-                    <span className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded">Select</span>
+                    <span className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded">{t('inventory.actions.select')}</span>
                   </button>
                   <button className="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg text-left transition-colors w-full group">
                     <div>
                       <div className="text-sm font-semibold text-white group-hover:text-[#007BFF] transition-colors">Corsair Vengeance RGB Pro 32GB (2 x 16GB) DDR4-3600</div>
                       <div className="text-xs font-mono text-white/40">CMW32GX4M2D3600C18</div>
                     </div>
-                    <span className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded">Select</span>
+                    <span className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded">{t('inventory.actions.select')}</span>
                   </button>
                 </div>
               </div>
@@ -132,8 +134,8 @@ export function StaticInventoryManager() {
                 <Monitor className="w-6 h-6" />
               </div>
               <div className="text-left">
-                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">Graphics</div>
-                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">Click to add existing Graphics...</div>
+                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">{t('inventory.items.graphics')}</div>
+                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">{t('inventory.emptyState.graphics')}</div>
               </div>
             </button>
 
@@ -142,8 +144,8 @@ export function StaticInventoryManager() {
                 <HardDrive className="w-6 h-6" />
               </div>
               <div className="text-left">
-                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">Storage</div>
-                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">Click to add existing Storage...</div>
+                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">{t('inventory.items.storage')}</div>
+                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">{t('inventory.emptyState.storage')}</div>
               </div>
             </button>
 
@@ -152,8 +154,8 @@ export function StaticInventoryManager() {
                 <Zap className="w-6 h-6" />
               </div>
               <div className="text-left">
-                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">Power Supply</div>
-                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">Click to add existing Power Supply...</div>
+                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">{t('inventory.items.powerSupply')}</div>
+                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">{t('inventory.emptyState.powerSupply')}</div>
               </div>
             </button>
 
@@ -164,36 +166,36 @@ export function StaticInventoryManager() {
             <div className="h-fit max-h-[calc(100vh-160px)] flex flex-col bg-[#18181B] rounded-2xl p-6 border border-white/5 shadow-2xl">
               
               <h3 className="text-lg font-semibold text-white font-sans shrink-0 mb-6">
-                Inventory Engine Status
+                {t('inventory.panel.title')}
               </h3>
               
               <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-sans text-white/40 uppercase tracking-wider">Nodes Declared</span>
+                  <span className="text-xs font-sans text-white/40 uppercase tracking-wider">{t('inventory.panel.nodesDeclared')}</span>
                   <span className="font-mono text-xl text-white">2/6</span>
                 </div>
                 
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-sans text-white/40 uppercase tracking-wider">Static TDP Reserved</span>
+                  <span className="text-xs font-sans text-white/40 uppercase tracking-wider">{t('inventory.panel.staticTdp')}</span>
                   <span className="font-mono text-xl text-yellow-400">170W</span>
                 </div>
                 
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-sans text-white/40 uppercase tracking-wider">Base Architecture Locked</span>
+                  <span className="text-xs font-sans text-white/40 uppercase tracking-wider">{t('inventory.panel.baseArch')}</span>
                   <span className="font-mono text-xl text-emerald-400">AM4 Socket</span>
                 </div>
 
                 <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 flex gap-3 mt-6">
                   <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                   <p className="text-sm text-blue-200/80 leading-relaxed font-sans">
-                    Pricing is disabled for declared components. The engine will only calculate costs for missing slots.
+                    {t('inventory.panel.infoText')}
                   </p>
                 </div>
               </div>
 
               <div className="shrink-0 pt-6 mt-auto border-t border-white/5">
                 <button className="w-full bg-[#007BFF] hover:bg-[#0056b3] text-white font-semibold py-3.5 px-4 rounded-xl transition-colors shadow-[0_0_15px_rgba(0,123,255,0.3)] hover:shadow-[0_0_25px_rgba(0,123,255,0.5)]">
-                  Lock Inventory & Proceed to Upgrades
+                  {t('inventory.panel.lockBtn')}
                 </button>
               </div>
 

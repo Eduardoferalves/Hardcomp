@@ -1,5 +1,7 @@
 import React from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
+import { useTranslation } from "../lib/i18n";
+import { useHardCompStore } from "../store/useHardCompStore";
 import { 
   Cpu, 
   LayoutGrid, 
@@ -8,25 +10,169 @@ import {
   Monitor, 
   Zap,
   Lock,
-  ChevronLeft
+  ChevronLeft,
+  Trash
 } from "lucide-react";
+import { ReactiveMetricsBar } from "./Builder/ReactiveMetricsBar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "./ui/alert-dialog";
+import { CATALOGO_HARDWARE } from "../lib/engine/mockData";
+import { ComponentCard } from "./Builder/ComponentCard";
+import { checkSocket, checkRamGeneration, getCascadingPurge } from "../lib/engine/specification";
+import { decodeBuildFromURL } from "../lib/engine/serializer";
+import { Componente, ComponentCategory } from "../types/store";
+import { toast } from "sonner";
 
 export function Builder() {
-  const activeCategories = [
-    { id: "cpu", label: "Select Processor", icon: <Cpu className="w-8 h-8 text-[#007BFF]" /> },
-    { id: "mobo", label: "Select Motherboard", icon: <LayoutGrid className="w-8 h-8 text-[#007BFF]" /> },
-  ];
+  const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const loadPrebuiltSetup = useHardCompStore((state) => state.loadPrebuiltSetup);
+  
+  const isColdStart = useHardCompStore((state) => state.isColdStart);
+  const selectedComponents = useHardCompStore((state) => state.selectedComponents);
+  const anchorComponent = useHardCompStore((state) => state.anchorComponent);
+  const applyChange = useHardCompStore((state) => state.applyChange);
 
-  const lockedCategories = [
-    { id: "ram", label: "Memory", icon: <Box className="w-8 h-8 text-white/40" /> },
-    { id: "gpu", label: "Graphics", icon: <Monitor className="w-8 h-8 text-white/40" /> },
-    { id: "storage", label: "Storage", icon: <HardDrive className="w-8 h-8 text-white/40" /> },
-    { id: "psu", label: "Power Supply", icon: <Zap className="w-8 h-8 text-white/40" /> },
-  ];
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [activeSheetCategory, setActiveSheetCategory] = React.useState<ComponentCategory | null>(null);
+
+  const [interception, setInterception] = React.useState<{
+    isOpen: boolean;
+    type: 'REMOVE' | 'REPLACE';
+    category: ComponentCategory | null;
+    newComponent?: Componente;
+    purgedCategories: ComponentCategory[];
+  }>({
+    isOpen: false,
+    type: 'REMOVE',
+    category: null,
+    purgedCategories: []
+  });
+
+  React.useEffect(() => {
+    const buildParam = searchParams.get('build');
+    if (buildParam) {
+      const decodedIds = decodeBuildFromURL(buildParam);
+      if (!decodedIds) {
+        toast.error(t('builder.messages.importError' as any));
+        setSearchParams({});
+      } else {
+        const componentsMap: Record<ComponentCategory, Componente | null> = {
+          CPU: null, Mobo: null, RAM: null, GPU: null, Storage: null, PSU: null
+        };
+        
+        decodedIds.forEach(id => {
+          const comp = CATALOGO_HARDWARE.find(c => c.id === id);
+          if (comp) {
+            componentsMap[comp.categoria] = comp;
+          }
+        });
+
+        const anchor = componentsMap.CPU ? 'CPU' : (componentsMap.Mobo ? 'Mobo' : null);
+        loadPrebuiltSetup(componentsMap, anchor);
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, setSearchParams, loadPrebuiltSetup, t]);
+
+  const allCategories = [
+    { id: "CPU", label: t('builder.categories.selectProcessor'), icon: Cpu },
+    { id: "Mobo", label: t('builder.categories.selectMotherboard'), icon: LayoutGrid },
+    { id: "RAM", label: t('builder.categories.memory'), icon: Box },
+    { id: "GPU", label: t('builder.categories.graphics'), icon: Monitor },
+    { id: "Storage", label: t('builder.categories.storage'), icon: HardDrive },
+    { id: "PSU", label: t('builder.categories.powerSupply'), icon: Zap },
+  ] as const;
 
   const graphNodes = [
-    "Processor", "Motherboard", "Memory", "Graphics", "Storage", "Power Supply"
+    t('builder.nodes.processor'), t('builder.nodes.motherboard'), t('builder.nodes.memory'), t('builder.nodes.graphics'), t('builder.nodes.storage'), t('builder.nodes.powerSupply')
   ];
+
+  const handleRemoveAttempt = (catId: ComponentCategory) => {
+    const purges = getCascadingPurge(useHardCompStore.getState(), { type: 'REMOVE', category: catId });
+    if (purges.length > 0) {
+      setInterception({
+        isOpen: true,
+        type: 'REMOVE',
+        category: catId,
+        purgedCategories: purges
+      });
+    } else {
+      applyChange({ type: 'REMOVE', category: catId }, []);
+    }
+  };
+
+  const handleReplaceAttempt = (catId: ComponentCategory, comp: Componente) => {
+    const purges = getCascadingPurge(useHardCompStore.getState(), { type: 'REPLACE', category: catId, newComponent: comp });
+    if (purges.length > 0) {
+      setInterception({
+        isOpen: true,
+        type: 'REPLACE',
+        category: catId,
+        newComponent: comp,
+        purgedCategories: purges
+      });
+    } else {
+      applyChange({ type: 'REPLACE', category: catId, newComponent: comp }, []);
+      setSheetOpen(false);
+    }
+  };
+
+  const confirmInterception = () => {
+    if (interception.type === 'REMOVE' && interception.category) {
+      applyChange({ type: 'REMOVE', category: interception.category }, interception.purgedCategories);
+    } else if (interception.type === 'REPLACE' && interception.category && interception.newComponent) {
+      applyChange({ type: 'REPLACE', category: interception.category, newComponent: interception.newComponent }, interception.purgedCategories);
+      setSheetOpen(false);
+    }
+    setInterception(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const renderInventory = () => {
+    if (!activeSheetCategory) return null;
+    const inventory = CATALOGO_HARDWARE.filter(c => c.categoria === activeSheetCategory);
+
+    return inventory.map((comp) => {
+      let isInvalid = false;
+      let motivoErro = "";
+
+      if (comp.categoria === 'CPU' && selectedComponents.Mobo && anchorComponent !== 'CPU') {
+        if (!checkSocket(comp, selectedComponents.Mobo)) {
+          isInvalid = true;
+          motivoErro = 'builder.messages.msg001';
+        }
+      }
+      if (comp.categoria === 'Mobo' && selectedComponents.CPU && anchorComponent !== 'Mobo') {
+        if (!checkSocket(selectedComponents.CPU, comp)) {
+          isInvalid = true;
+          motivoErro = 'builder.messages.msg001';
+        }
+      }
+      
+      if (comp.categoria === 'RAM' && selectedComponents.Mobo) {
+        if (!checkRamGeneration(selectedComponents.Mobo, comp)) {
+          isInvalid = true;
+          motivoErro = 'builder.messages.msg003';
+        }
+      }
+      if (comp.categoria === 'Mobo' && selectedComponents.RAM) {
+        if (!checkRamGeneration(comp, selectedComponents.RAM)) {
+          isInvalid = true;
+          motivoErro = 'builder.messages.msg003';
+        }
+      }
+
+      return (
+        <ComponentCard 
+          key={comp.id}
+          componente={comp}
+          isInvalid={isInvalid}
+          motivoErro={motivoErro ? t(motivoErro as any) : undefined}
+          onSelect={() => handleReplaceAttempt(comp.categoria, comp)}
+        />
+      );
+    });
+  };
 
   return (
     <div className="w-screen h-screen bg-[#121212] font-sans text-white flex flex-col overflow-hidden relative">
@@ -44,59 +190,95 @@ export function Builder() {
                 className="group flex items-center gap-2 text-white/50 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors shrink-0"
               >
                 <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
-                <span className="text-sm font-medium font-sans">Return to Hub</span>
+                <span className="text-sm font-medium font-sans">{t('builder.header.returnHub')}</span>
               </Link>
               <div>
                 <div className="text-xs font-mono text-white/40 tracking-wider mb-3 uppercase">
-                  Builder / Initialization
+                  {t('builder.header.breadcrumb')}
                 </div>
                 <h1 className="text-4xl font-bold text-white tracking-tight mb-3">
-                  Select your Anchor Component
+                  {t('builder.header.title')}
                 </h1>
                 <p className="text-white/50 text-base max-w-2xl leading-relaxed">
-                  The Zero-Trust engine requires a foundation. Choose a Processor or Motherboard to initialize the topological graph.
+                  {t('builder.header.subtitle')}
                 </p>
               </div>
             </header>
 
             {/* The Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* ACTIVE CARDS */}
-              {activeCategories.map((cat) => (
-                <button 
-                  key={cat.id} 
-                  className="group relative h-48 bg-[#1E1E1E]/80 backdrop-blur border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-[#007BFF]/50 hover:bg-[#1E1E1E] transition-all duration-300 shadow-xl hover:shadow-[0_0_30px_rgba(0,123,255,0.15)]"
-                >
-                  <div className="p-3 bg-[#007BFF]/10 rounded-full group-hover:scale-110 transition-transform duration-300">
-                    {cat.icon}
-                  </div>
-                  <span className="font-semibold text-lg text-white group-hover:text-[#007BFF] transition-colors">
-                    {cat.label}
-                  </span>
-                </button>
-              ))}
+              {allCategories.map((cat) => {
+                const Icon = cat.icon;
+                const isAnchorCandidate = cat.id === "CPU" || cat.id === "Mobo";
+                const isLocked = isColdStart && !isAnchorCandidate;
+                const isSelected = selectedComponents[cat.id as ComponentCategory] !== null;
 
-              {/* LOCKED CARDS */}
-              {lockedCategories.map((cat) => (
-                <div 
-                  key={cat.id} 
-                  className="relative h-48 bg-[#1E1E1E]/50 backdrop-blur border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 opacity-40 cursor-not-allowed grayscale"
-                >
-                  {/* Lock Overlay Badge */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 px-4 py-2 bg-black/80 rounded-full border border-white/10 flex items-center gap-2 shadow-lg backdrop-blur-md">
-                    <Lock className="w-3.5 h-3.5 text-white/70" />
-                    <span className="text-xs font-medium text-white/90 whitespace-nowrap">Awaiting Anchor</span>
-                  </div>
+                if (isLocked) {
+                  return (
+                    <div 
+                      key={cat.id} 
+                      className="relative h-48 bg-[#1E1E1E]/50 backdrop-blur border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 opacity-40 cursor-not-allowed grayscale"
+                    >
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 px-4 py-2 bg-black/80 rounded-full border border-white/10 flex items-center gap-2 shadow-lg backdrop-blur-md">
+                        <Lock className="w-3.5 h-3.5 text-white/70" />
+                        <span className="text-xs font-medium text-white/90 whitespace-nowrap">{t('builder.badges.awaitingAnchor')}</span>
+                      </div>
 
-                  <div className="p-3 bg-white/5 rounded-full">
-                    {cat.icon}
+                      <div className="p-3 bg-white/5 rounded-full">
+                        <Icon className="w-8 h-8 text-white/40" />
+                      </div>
+                      <span className="font-semibold text-lg text-white/50">
+                        {cat.label}
+                      </span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div 
+                    key={cat.id} 
+                    className={`group relative h-48 ${isSelected ? 'bg-[#1E1E1E] border-[#007BFF]/50 shadow-xl' : 'bg-[#1E1E1E]/80 border-white/10 hover:border-[#007BFF]/50 hover:bg-[#1E1E1E] hover:shadow-[0_0_30px_rgba(0,123,255,0.15)]'} backdrop-blur border rounded-2xl flex flex-col items-center justify-center transition-all duration-300 overflow-hidden`}
+                  >
+                    {isSelected && selectedComponents[cat.id as ComponentCategory] ? (
+                      <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
+                        <button 
+                          onClick={() => handleRemoveAttempt(cat.id as ComponentCategory)}
+                          className="absolute top-4 right-4 p-2 bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30] hover:text-white rounded-full transition-colors z-10 cursor-pointer"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                        <div className="flex flex-col items-center text-center">
+                          <h3 className="font-sans font-bold text-lg text-white mb-1 leading-tight max-w-[200px]">{selectedComponents[cat.id as ComponentCategory]!.nome_comercial}</h3>
+                          <span className="font-mono text-sm text-[#007BFF] mb-3 font-semibold">R$ {selectedComponents[cat.id as ComponentCategory]!.preco.toLocaleString('pt-BR')}</span>
+                          <button 
+                            onClick={() => { setActiveSheetCategory(cat.id as ComponentCategory); setSheetOpen(true); }}
+                            className="text-xs font-semibold text-white/40 hover:text-white hover:underline cursor-pointer"
+                          >
+                            {t('builder.actions.replace' as any)}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button 
+                        className="w-full h-full p-6 flex flex-col items-center justify-center gap-4 cursor-pointer"
+                        onClick={() => {
+                          if (!isLocked) {
+                            setActiveSheetCategory(cat.id as ComponentCategory);
+                            setSheetOpen(true);
+                          }
+                        }}
+                      >
+                        <div className={`p-3 rounded-full transition-transform duration-300 ${isSelected ? 'bg-[#007BFF] text-white scale-110' : 'bg-[#007BFF]/10 text-[#007BFF] group-hover:scale-110'}`}>
+                          <Icon className="w-8 h-8" />
+                        </div>
+                        <span className={`font-semibold text-lg transition-colors ${isSelected ? 'text-white' : 'text-white/60 group-hover:text-[#007BFF]'}`}>
+                          {cat.label}
+                        </span>
+                      </button>
+                    )}
                   </div>
-                  <span className="font-semibold text-lg text-white/50">
-                    {cat.label}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </main>
@@ -104,67 +286,87 @@ export function Builder() {
         {/* AREA 2: RIGHT SIDEBAR (Architecture Graph) */}
         <aside className="w-[300px] shrink-0 bg-[#18181B] border-l border-white/5 flex flex-col">
           <div className="p-6 border-b border-white/5">
-            <h2 className="text-lg font-semibold text-white mb-2">Architecture Graph</h2>
-            <div className="inline-flex items-center px-2 py-1 bg-white/5 rounded font-mono text-[10px] text-[#A1A1AA] tracking-widest border border-white/10">
-              GRAPH_UNINITIALIZED
+            <h2 className="text-lg font-semibold text-white mb-2">{t('builder.sidebar.title')}</h2>
+            <div className={`inline-flex items-center px-2 py-1 rounded font-mono text-[10px] tracking-widest border transition-colors ${anchorComponent ? 'bg-[#007BFF]/10 text-[#007BFF] border-[#007BFF]/20' : 'bg-white/5 text-[#A1A1AA] border-white/10'}`}>
+              {anchorComponent ? t('builder.graph.initialized' as any) : t('builder.badges.graphUninitialized')}
             </div>
           </div>
           
           <div className="flex-1 p-6 flex flex-col gap-3 overflow-y-auto">
-            {graphNodes.map((node, index) => (
-              <div 
-                key={index}
-                className="w-full py-4 px-4 border border-dashed border-white/20 rounded-xl bg-transparent flex flex-col items-center justify-center"
-              >
-                 <span className="text-sm font-medium text-white/30">{node}</span>
-                 <span className="text-[10px] font-mono text-white/20 mt-1 uppercase">Pending Input</span>
-              </div>
-            ))}
+            {allCategories.map((cat) => {
+              const selectedComp = selectedComponents[cat.id as ComponentCategory];
+              return (
+                <div 
+                  key={cat.id}
+                  className={`w-full py-4 px-4 border rounded-xl flex flex-col items-center justify-center transition-all ${
+                    selectedComp 
+                      ? 'border-[#007BFF]/50 bg-[#007BFF]/5 shadow-[0_0_15px_rgba(0,123,255,0.1)]' 
+                      : 'border-dashed border-white/20 bg-transparent'
+                  }`}
+                >
+                   <span className={`text-sm font-medium transition-colors ${selectedComp ? 'text-white' : 'text-white/30'}`}>{cat.label}</span>
+                   <span className={`text-[10px] font-mono mt-1 uppercase transition-colors ${selectedComp ? 'text-[#007BFF]' : 'text-white/20'}`}>
+                     {selectedComp ? selectedComp.nome_comercial : t('builder.badges.pendingInput')}
+                   </span>
+                </div>
+              );
+            })}
           </div>
         </aside>
 
       </div>
 
       {/* AREA 3: FIXED BOTTOM REACTIVE BAR */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-[#121212] border-t border-white/10 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <div className="h-full w-full max-w-[1400px] mx-auto px-10 flex items-center justify-between">
-          
-          {/* Metrics */}
-          <div className="flex items-center gap-10 divide-x divide-white/10">
-            
-            <div className="pr-10">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-1">Total Investment</p>
-              <div className="font-mono text-2xl text-white/40">
-                $0.00
-              </div>
-            </div>
+      <ReactiveMetricsBar />
 
-            <div className="px-10">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-1">Total TDP Draw</p>
-              <div className="font-mono text-2xl text-white/40">
-                0W
-              </div>
-            </div>
-
-            <div className="pl-10">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-1">PSU Target Limit</p>
-              <div className="font-mono text-2xl text-white/40">
-                0W
-              </div>
-            </div>
-
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="bg-[#121212] border-white/10 text-white w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-white text-xl">
+              {activeSheetCategory && allCategories.find(c => c.id === activeSheetCategory)?.label || t('builder.inventory.title' as any)}
+            </SheetTitle>
+            <SheetDescription className="text-white/50">
+              {t('builder.badges.pendingInput')}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-col gap-4">
+            {renderInventory()}
           </div>
+        </SheetContent>
+      </Sheet>
 
-          {/* Primary Action Button */}
-          <button 
-            disabled
-            className="px-8 py-3.5 bg-gray-800 text-white/40 rounded-lg text-sm font-semibold opacity-50 cursor-not-allowed border border-white/5"
-          >
-            Finalize Build
-          </button>
-
-        </div>
-      </div>
+      <AlertDialog open={interception.isOpen} onOpenChange={(o) => setInterception(prev => ({ ...prev, isOpen: o }))}>
+        <AlertDialogContent className="bg-[#1E1E1E] border-white/10 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white text-xl">{t('builder.alerts.incompatibilityTitle' as any)}</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60 text-base leading-relaxed">
+              {interception.type === 'REMOVE' 
+                ? t('builder.messages.msg004' as any).replace('{comp}', selectedComponents[interception.category as ComponentCategory]?.nome_comercial || '').replace('{count}', interception.purgedCategories.length.toString())
+                : t('builder.messages.msg005' as any).replace('{count}', interception.purgedCategories.length.toString())
+              }
+              <div className="mt-4 p-3 bg-black/40 border border-[#FF3B30]/20 rounded-lg">
+                <span className="text-xs font-mono text-[#FF3B30] uppercase tracking-wider mb-2 block">{t('builder.alerts.affectedComponents' as any)}</span>
+                <div className="flex flex-wrap gap-2">
+                  {interception.purgedCategories.map(cat => (
+                    <span key={cat} className="px-2 py-1 bg-[#FF3B30]/10 text-[#FF3B30] rounded text-xs font-medium border border-[#FF3B30]/20">
+                      {selectedComponents[cat]?.nome_comercial || cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 border-t border-white/5 pt-4">
+            <AlertDialogCancel className="bg-transparent text-white border-white/10 hover:bg-white/5">{t('builder.actions.cancel' as any)}</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmInterception}
+              className="bg-[#FF3B30] text-white hover:bg-[#FF3B30]/80 shadow-[0_0_15px_rgba(255,59,48,0.2)] hover:shadow-[0_0_25px_rgba(255,59,48,0.4)] border-transparent transition-all"
+            >
+              {t('builder.actions.confirmPurge' as any)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

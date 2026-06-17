@@ -1,13 +1,15 @@
 import { Link } from "react-router";
 import { PlusSquare, RefreshCw, Wand2, ChevronRight } from "lucide-react";
+import { useTranslation } from "../lib/i18n";
 
 export function Hub() {
+  const { t } = useTranslation();
   return (
     <div className="flex-1 flex flex-col container mx-auto px-6 py-12">
       <div className="mb-12">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-3">Initialize Build Environment</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-3">{t('hub.title')}</h1>
         <p className="text-muted-foreground max-w-2xl">
-          Select your deployment vector. The deterministic engine will adapt its constraints based on your starting parameters.
+          {t('hub.subtitle')}
         </p>
       </div>
 
@@ -23,13 +25,13 @@ export function Hub() {
           <div className="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
             <PlusSquare className="w-7 h-7 text-primary" />
           </div>
-          <h3 className="text-xl font-bold mb-3 text-foreground">Cold Start <span className="text-muted-foreground font-normal text-sm ml-2">(Scratch Build)</span></h3>
+          <h3 className="text-xl font-bold mb-3 text-foreground">{t('hub.cards.coldStart.title')} <span className="text-muted-foreground font-normal text-sm ml-2">{t('hub.cards.coldStart.badge')}</span></h3>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6 flex-1">
-            Select an Anchor Component (CPU or Motherboard) and let the engine restrict incompatible parts. Full strict-mode validation.
+            {t('hub.cards.coldStart.description')}
           </p>
           <div className="mt-auto pt-4 border-t border-border/50 font-mono text-xs text-primary flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-            ENGINE_READY: 0 CONSTRAINTS
+            {t('hub.cards.coldStart.status')}
           </div>
         </Link>
 
@@ -44,13 +46,13 @@ export function Hub() {
           <div className="w-14 h-14 bg-secondary rounded-lg flex items-center justify-center mb-6">
             <RefreshCw className="w-7 h-7 text-foreground" />
           </div>
-          <h3 className="text-xl font-bold mb-3 text-foreground">Upgrade Setup <span className="text-muted-foreground font-normal text-sm ml-2">(Retrofit)</span></h3>
+          <h3 className="text-xl font-bold mb-3 text-foreground">{t('hub.cards.upgrade.title')} <span className="text-muted-foreground font-normal text-sm ml-2">{t('hub.cards.upgrade.badge')}</span></h3>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6 flex-1">
-            Input parts you already own (marked as 'Static'). The engine will discover mathematically sound upgrades for the remaining slots.
+            {t('hub.cards.upgrade.description')}
           </p>
           <div className="mt-auto pt-4 border-t border-border/50 font-mono text-xs text-muted-foreground flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground"></span>
-            AWAITING_STATIC_INPUTS
+            {t('hub.cards.upgrade.status')}
           </div>
         </Link>
 
@@ -65,13 +67,13 @@ export function Hub() {
           <div className="w-14 h-14 bg-success/10 rounded-lg flex items-center justify-center mb-6">
             <Wand2 className="w-7 h-7 text-success" />
           </div>
-          <h3 className="text-xl font-bold mb-3 text-foreground">Guided Wizard <span className="text-muted-foreground font-normal text-sm ml-2">(Auto-Pilot)</span></h3>
+          <h3 className="text-xl font-bold mb-3 text-foreground">{t('hub.cards.wizard.title')} <span className="text-muted-foreground font-normal text-sm ml-2">{t('hub.cards.wizard.badge')}</span></h3>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6 flex-1">
-            Select your budget and use case (Gaming, Workstation, Render Node), and receive a globally optimal curated build.
+            {t('hub.cards.wizard.description')}
           </p>
           <div className="mt-auto pt-4 border-t border-border/50 font-mono text-xs text-success flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
-            ALGORITHM_STANDING_BY
+            {t('hub.cards.wizard.status')}
           </div>
         </Link>
       </div>
