@@ -1,21 +1,69 @@
-import React from "react";
-import { Link } from "react-router";
-import { 
-  ChevronLeft, 
-  Trash2, 
-  Search, 
-  Info,
-  LayoutGrid,
-  Cpu,
-  Box,
-  Monitor,
-  HardDrive,
-  Zap
-} from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router";
+import { ChevronLeft, Trash2, Search, Info, LayoutGrid, Cpu, Box, Monitor, HardDrive, Zap, X } from "lucide-react";
 import { useTranslation } from "../lib/i18n";
+import { useHardCompStore } from "../store/useHardCompStore";
+import { CATALOGO_HARDWARE } from "../lib/engine/mockData";
+import { Componente, ComponentCategory } from "../types/store";
+
+const CATEGORY_ICONS: Record<ComponentCategory, React.ElementType> = {
+  Mobo: LayoutGrid, CPU: Cpu, RAM: Box, GPU: Monitor, Storage: HardDrive, PSU: Zap
+};
 
 export function StaticInventoryManager() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  
+  // Ações atômicas do Zustand
+  const selectedComponents = useHardCompStore(state => state.selectedComponents);
+  const setComponent = useHardCompStore(state => state.selectComponent);
+  const applyChange = useHardCompStore(state => state.applyChange);
+
+  const removeComponent = (category: ComponentCategory) => {
+    applyChange({ type: 'REMOVE', category }, []);
+  };
+
+  // Estados Locais de UI (Modo de Edição)
+  const [activeSearchCategory, setActiveSearchCategory] = useState<ComponentCategory | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Motor de Busca Simples (Filtra o CATALOGO_HARDWARE baseado na categoria ativa e na string digitada)
+  const searchResults = useMemo(() => {
+    if (!activeSearchCategory || searchQuery.trim().length < 2) return [];
+    
+    return CATALOGO_HARDWARE.filter(comp => 
+      comp.categoria === activeSearchCategory && 
+      comp.nome_comercial.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [activeSearchCategory, searchQuery]);
+
+  // Cálculos do Painel Topológico
+  const activeNodesCount = Object.values(selectedComponents).filter(c => c !== null).length;
+  const totalStaticTDP = Object.values(selectedComponents)
+    .filter((c): c is Componente => c !== null && c.categoria !== 'PSU')
+    .reduce((acc, curr) => acc + curr.tdp_maximo, 0);
+
+  const baseArch = selectedComponents.Mobo?.socket_type || selectedComponents.CPU?.socket_type || 'Nenhuma (Selecione Mobo/CPU)';
+
+  // Handlers
+  const handleLockAndProceed = () => {
+    // Ao trancar o inventário estático, o usuário é ejetado para o construtor principal
+    // para finalizar a montagem com Poka-Yoke ativado.
+    const anchor = selectedComponents.CPU ? 'CPU' : (selectedComponents.Mobo ? 'Mobo' : null);
+    if (anchor) {
+      useHardCompStore.setState({
+        isColdStart: false,
+        anchorComponent: anchor
+      });
+    } else {
+      useHardCompStore.setState({
+        isColdStart: true,
+        anchorComponent: null
+      });
+    }
+    navigate('/builder');
+  };
+
   return (
     <div className="w-screen h-screen bg-[#121212] text-white font-sans flex flex-col overflow-hidden relative">
       
@@ -47,118 +95,122 @@ export function StaticInventoryManager() {
           {/* COLUMN 1: THE INVENTORY BUILDER */}
           <div className="flex-1 flex flex-col overflow-y-auto pb-20 pr-4 w-full gap-4 pt-10 pl-10 md:pl-0">
             
-            {/* Slot 1: Filled - Motherboard */}
-            <div className="group relative bg-[#1E1E1E]/80 backdrop-blur rounded-2xl border border-emerald-500/30 p-5 flex items-center gap-5 shadow-lg">
-              <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 shrink-0">
-                <LayoutGrid className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-mono text-white/40 mb-1">{t('inventory.items.motherboard')}</div>
-                <div className="text-lg font-semibold text-white truncate">ASUS ROG Strix B550-F Gaming</div>
-              </div>
-              <div className="flex flex-col items-end gap-1 shrink-0 px-4 border-r border-white/10">
-                <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] tracking-wider border border-emerald-500/20">
-                  {t('inventory.badges.staticNode')}
-                </span>
-                <span className="font-mono text-white/50 text-sm">{t('inventory.badges.ownedValue')}</span>
-              </div>
-              <button className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-2">
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
+            {(['Mobo', 'CPU', 'RAM', 'GPU', 'Storage', 'PSU'] as ComponentCategory[]).map(category => {
+              const comp = selectedComponents[category];
+              const isSearching = activeSearchCategory === category;
+              const Icon = CATEGORY_ICONS[category];
 
-            {/* Slot 2: Filled - Processor */}
-            <div className="group relative bg-[#1E1E1E]/80 backdrop-blur rounded-2xl border border-emerald-500/30 p-5 flex items-center gap-5 shadow-lg">
-              <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 shrink-0">
-                <Cpu className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-mono text-white/40 mb-1">{t('inventory.items.processor')}</div>
-                <div className="text-lg font-semibold text-white truncate">AMD Ryzen 7 5800X</div>
-              </div>
-              <div className="flex flex-col items-end gap-1 shrink-0 px-4 border-r border-white/10">
-                <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] tracking-wider border border-emerald-500/20">
-                  {t('inventory.badges.staticNode')}
-                </span>
-                <span className="font-mono text-white/50 text-sm">{t('inventory.badges.ownedValue')}</span>
-              </div>
-              <button className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-2">
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Slot 3: Active Search - Memory */}
-            <div className="relative bg-[#1E1E1E] rounded-2xl border border-[#007BFF]/50 p-5 shadow-[0_0_20px_rgba(0,123,255,0.15)] flex flex-col gap-4">
-              <div className="flex items-center gap-4 w-full">
-                <div className="p-3 bg-[#007BFF]/10 rounded-xl text-[#007BFF] shrink-0">
-                  <Box className="w-6 h-6" />
-                </div>
-                <div className="flex-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-[#007BFF]/50" />
+              // ESTADO 1: Slot Preenchido (A Peça que o usuário informou que já possui)
+              if (comp && !isSearching) {
+                return (
+                  <div key={category} className="group relative bg-[#1E1E1E]/80 backdrop-blur rounded-2xl border border-emerald-500/30 p-5 flex items-center gap-5 shadow-lg">
+                    <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 shrink-0">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-mono text-white/40 mb-1">{category}</div>
+                      <div className="text-lg font-semibold text-white truncate">{comp.nome_comercial}</div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0 px-4 border-r border-white/10">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] tracking-wider border border-emerald-500/20">
+                        {t('inventory.badges.staticNode')}
+                      </span>
+                    </div>
+                    {/* Botões de Ação: Editar (Abre a busca) ou Remover */}
+                    <button 
+                      onClick={() => { setActiveSearchCategory(category); setSearchQuery(''); }}
+                      className="p-2 text-white/40 hover:text-[#007BFF] hover:bg-[#007BFF]/10 rounded-lg transition-colors ml-2 cursor-pointer"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => removeComponent(category)}
+                      className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
-                  <input 
-                    type="text" 
-                    className="block w-full bg-black/50 border border-[#007BFF]/30 rounded-lg py-3 pl-10 pr-4 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-[#007BFF] font-sans text-sm"
-                    placeholder={t('inventory.search.placeholder')}
-                    defaultValue="Corsair Vengeance"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              
-              {/* Floating Dropdown Simulation */}
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#18181B] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-20 mx-5">
-                <div className="max-h-48 overflow-y-auto p-1 flex flex-col gap-1">
-                  <button className="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg text-left transition-colors w-full group">
-                    <div>
-                      <div className="text-sm font-semibold text-white group-hover:text-[#007BFF] transition-colors">Corsair Vengeance LPX 32GB (2 x 16GB) DDR4-3600</div>
-                      <div className="text-xs font-mono text-white/40">CMK32GX4M2D3600C18</div>
+                );
+              }
+
+              // ESTADO 2: Slot em Modo de Busca Ativa
+              if (isSearching) {
+                return (
+                  <div key={category} className="relative bg-[#1E1E1E] rounded-2xl border border-[#007BFF]/50 p-5 shadow-[0_0_20px_rgba(0,123,255,0.15)] flex flex-col gap-4">
+                    <div className="flex items-center gap-4 w-full">
+                      <div className="p-3 bg-[#007BFF]/10 rounded-xl text-[#007BFF] shrink-0">
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Search className="h-5 w-5 text-[#007BFF]/50" />
+                        </div>
+                        <input 
+                          type="text" 
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="block w-full bg-black/50 border border-[#007BFF]/30 rounded-lg py-3 pl-10 pr-10 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-[#007BFF] font-sans text-sm"
+                          placeholder={`Buscar modelo de ${category}...`}
+                          autoFocus
+                        />
+                        <button 
+                          onClick={() => setActiveSearchCategory(null)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/50 hover:text-white cursor-pointer"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded">{t('inventory.actions.select')}</span>
-                  </button>
-                  <button className="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg text-left transition-colors w-full group">
-                    <div>
-                      <div className="text-sm font-semibold text-white group-hover:text-[#007BFF] transition-colors">Corsair Vengeance RGB Pro 32GB (2 x 16GB) DDR4-3600</div>
-                      <div className="text-xs font-mono text-white/40">CMW32GX4M2D3600C18</div>
+                    
+                    {/* Dropdown de Resultados Dinâmico */}
+                    {searchResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[#18181B] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-20 mx-5">
+                        <div className="max-h-48 overflow-y-auto p-1 flex flex-col gap-1">
+                          {searchResults.map(result => (
+                            <button 
+                              key={result.id}
+                              onClick={() => {
+                                setComponent(category, result);
+                                setActiveSearchCategory(null);
+                                setSearchQuery("");
+                              }}
+                              className="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg text-left transition-colors w-full group cursor-pointer"
+                            >
+                              <div>
+                                <div className="text-sm font-semibold text-white group-hover:text-[#007BFF] transition-colors">{result.nome_comercial}</div>
+                              </div>
+                              <span className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded">{t('inventory.actions.select')}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {searchQuery.length >= 2 && searchResults.length === 0 && (
+                      <div className="text-xs text-white/40 text-center py-2">Nenhuma peça encontrada no catálogo.</div>
+                    )}
+                  </div>
+                );
+              }
+
+              // ESTADO 3: Slot Vazio
+              return (
+                <button 
+                  key={category}
+                  onClick={() => { setActiveSearchCategory(category); setSearchQuery(''); }}
+                  className="group w-full py-6 px-5 rounded-2xl border border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-colors flex items-center gap-5 cursor-pointer"
+                >
+                  <div className="p-3 bg-white/5 rounded-xl text-white/40 group-hover:text-white/70 transition-colors shrink-0">
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">{category}</div>
+                    <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">
+                      Adicionar {category} existente
                     </div>
-                    <span className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded">{t('inventory.actions.select')}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Slots 4, 5, 6: Empty States */}
-            <button className="group w-full py-6 px-5 rounded-2xl border border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-colors flex items-center gap-5">
-              <div className="p-3 bg-white/5 rounded-xl text-white/40 group-hover:text-white/70 transition-colors shrink-0">
-                <Monitor className="w-6 h-6" />
-              </div>
-              <div className="text-left">
-                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">{t('inventory.items.graphics')}</div>
-                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">{t('inventory.emptyState.graphics')}</div>
-              </div>
-            </button>
-
-            <button className="group w-full py-6 px-5 rounded-2xl border border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-colors flex items-center gap-5">
-              <div className="p-3 bg-white/5 rounded-xl text-white/40 group-hover:text-white/70 transition-colors shrink-0">
-                <HardDrive className="w-6 h-6" />
-              </div>
-              <div className="text-left">
-                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">{t('inventory.items.storage')}</div>
-                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">{t('inventory.emptyState.storage')}</div>
-              </div>
-            </button>
-
-            <button className="group w-full py-6 px-5 rounded-2xl border border-dashed border-white/20 bg-transparent hover:bg-white/5 hover:border-white/40 transition-colors flex items-center gap-5">
-              <div className="p-3 bg-white/5 rounded-xl text-white/40 group-hover:text-white/70 transition-colors shrink-0">
-                <Zap className="w-6 h-6" />
-              </div>
-              <div className="text-left">
-                <div className="text-xs font-mono text-white/40 mb-1 group-hover:text-white/60 transition-colors">{t('inventory.items.powerSupply')}</div>
-                <div className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">{t('inventory.emptyState.powerSupply')}</div>
-              </div>
-            </button>
-
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* COLUMN 2: TOPOLOGICAL IMPACT PANEL */}
@@ -172,17 +224,17 @@ export function StaticInventoryManager() {
               <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-sans text-white/40 uppercase tracking-wider">{t('inventory.panel.nodesDeclared')}</span>
-                  <span className="font-mono text-xl text-white">2/6</span>
+                  <span className="font-mono text-xl text-white">{activeNodesCount}/6</span>
                 </div>
                 
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-sans text-white/40 uppercase tracking-wider">{t('inventory.panel.staticTdp')}</span>
-                  <span className="font-mono text-xl text-yellow-400">170W</span>
+                  <span className="font-mono text-xl text-yellow-400">{totalStaticTDP}W</span>
                 </div>
                 
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-sans text-white/40 uppercase tracking-wider">{t('inventory.panel.baseArch')}</span>
-                  <span className="font-mono text-xl text-emerald-400">AM4 Socket</span>
+                  <span className="font-mono text-xl text-emerald-400 truncate">{baseArch}</span>
                 </div>
 
                 <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 flex gap-3 mt-6">
@@ -194,7 +246,11 @@ export function StaticInventoryManager() {
               </div>
 
               <div className="shrink-0 pt-6 mt-auto border-t border-white/5">
-                <button className="w-full bg-[#007BFF] hover:bg-[#0056b3] text-white font-semibold py-3.5 px-4 rounded-xl transition-colors shadow-[0_0_15px_rgba(0,123,255,0.3)] hover:shadow-[0_0_25px_rgba(0,123,255,0.5)]">
+                <button 
+                  onClick={handleLockAndProceed}
+                  disabled={activeNodesCount === 0}
+                  className="w-full bg-[#007BFF] hover:bg-[#0056b3] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3.5 px-4 rounded-xl transition-colors shadow-[0_0_15px_rgba(0,123,255,0.3)] hover:shadow-[0_0_25px_rgba(0,123,255,0.5)] cursor-pointer"
+                >
                   {t('inventory.panel.lockBtn')}
                 </button>
               </div>
