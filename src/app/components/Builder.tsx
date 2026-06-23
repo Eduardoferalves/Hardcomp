@@ -22,8 +22,20 @@ import { checkSocket, checkRamGeneration, getCascadingPurge } from "../lib/engin
 import { decodeBuildFromURL } from "../lib/engine/serializer";
 import { Componente, ComponentCategory } from "../types/store";
 import { toast } from "sonner";
+import { DataEngineErrorBoundary } from "./ErrorBoundary";
+
+export function useHydrationGuard() {
+  const [hydrated, setHydrated] = React.useState(false);
+
+  React.useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  return hydrated;
+}
 
 export function Builder() {
+  const hasHydrated = useHydrationGuard();
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const loadPrebuiltSetup = useHardCompStore((state) => state.loadPrebuiltSetup);
@@ -38,11 +50,15 @@ export function Builder() {
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (wasFromRecommendation) {
+    if (hasHydrated && wasFromRecommendation) {
       toast.success(t('MSG-028'));
       setWasFromRecommendation(false);
     }
-  }, [wasFromRecommendation, setWasFromRecommendation, t]);
+  }, [hasHydrated, wasFromRecommendation, setWasFromRecommendation, t]);
+
+  if (!hasHydrated) {
+    return <div className="w-screen h-screen bg-[#121212] animate-pulse" />;
+  }
   const [activeSheetCategory, setActiveSheetCategory] = React.useState<ComponentCategory | null>(null);
 
   const [interception, setInterception] = React.useState<{
@@ -377,7 +393,15 @@ export function Builder() {
       </div>
 
       {/* AREA 3: FIXED BOTTOM REACTIVE BAR */}
-      <ReactiveMetricsBar />
+      <DataEngineErrorBoundary 
+        fallback={
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-[#FF3B30]/10 border-t border-[#FF3B30] flex items-center justify-center text-xs font-mono text-[#FF3B30] z-20">
+            [SISTEMA EM MODO DE RECOVERY]: Falha crítica no processamento dos dados técnicos. Configuração resetada para segurança.
+          </div>
+        }
+      >
+        <ReactiveMetricsBar />
+      </DataEngineErrorBoundary>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="bg-[#121212] border-white/10 text-white w-full sm:max-w-md overflow-y-auto">
