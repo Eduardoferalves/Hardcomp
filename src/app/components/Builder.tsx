@@ -211,12 +211,12 @@ export function Builder() {
             </p>
             <button 
               onClick={() => {
-                useHardCompStore.setState({ pendingTopologyAction: null });
+                useHardCompStore.getState().clearBuild();
                 window.location.reload();
               }}
               className="px-6 py-2.5 bg-[#FF3B30] hover:bg-[#FF3B30]/80 text-white rounded-lg text-sm font-semibold transition-all shadow-[0_0_15px_rgba(255,59,48,0.2)] cursor-pointer"
             >
-              Recuperar Estado Anterior
+              Resetar Configuração
             </button>
           </div>
         }

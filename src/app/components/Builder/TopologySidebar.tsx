@@ -9,7 +9,7 @@ interface TopologySidebarProps {
 
 const CATEGORIES: ComponentCategory[] = ["CPU", "Mobo", "RAM", "GPU", "Storage", "PSU"];
 
-export function TopologySidebar({ selectedComponents, anchorComponent }: TopologySidebarProps) {
+export const TopologySidebar = React.memo(function TopologySidebar({ selectedComponents, anchorComponent }: TopologySidebarProps) {
   const { t } = useTranslation();
 
   const labels: Record<ComponentCategory, string> = {

@@ -10,7 +10,7 @@ interface CategoryGridProps {
   onOpenInventory: (catId: ComponentCategory) => void;
 }
 
-export function CategoryGrid({
+export const CategoryGrid = React.memo(function CategoryGrid({
   isColdStart,
   selectedComponents,
   onRemoveAttempt,
