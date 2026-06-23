@@ -204,6 +204,12 @@ export const useHardCompStore = create<HardCompState>()(
     }),
     {
       name: "hardcomp-storage",
+      partialize: (state) => 
+        Object.fromEntries(
+          Object.entries(state).filter(
+            ([key]) => !['auditLogs', 'pendingTopologyAction'].includes(key)
+          )
+        ),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hydrateStore();
