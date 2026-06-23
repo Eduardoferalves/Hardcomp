@@ -21,6 +21,21 @@ export function ReactiveMetricsBar() {
   const selectedComponents = useHardCompStore(state => state.selectedComponents);
   const setBudget = useHardCompStore(state => state.setBudget);
 
+  const [localBudget, setLocalBudget] = React.useState(budget.toString());
+
+  React.useEffect(() => {
+    setLocalBudget(budget.toString());
+  }, [budget]);
+
+  const handleBudgetBlur = () => {
+    const numericValue = Number(localBudget);
+    if (!isNaN(numericValue) && numericValue > 0) {
+      setBudget(numericValue);
+    } else {
+      setLocalBudget(budget.toString()); // Fallback para o estado seguro anterior
+    }
+  };
+
   const isError = (!isBuildValid && errorMessage) || isOverBudget;
   const isShareEnabled = isBuildValid && !isColdStart && !isOverBudget;
 
@@ -71,8 +86,9 @@ export function ReactiveMetricsBar() {
                 / Limit: 
                 <input 
                   type="number" 
-                  value={budget} 
-                  onChange={(e) => setBudget(Number(e.target.value))}
+                  value={localBudget} 
+                  onChange={(e) => setLocalBudget(e.target.value)}
+                  onBlur={handleBudgetBlur}
                   className="bg-transparent border-b border-white/10 hover:border-white/30 focus:border-[#007BFF] focus:outline-none w-16 ml-1 text-center text-white/60 font-mono"
                 />
               </span>

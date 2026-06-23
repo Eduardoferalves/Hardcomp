@@ -5,6 +5,7 @@ export const dictionary = {
   "MSG-023": "MSG-023: Todas builds violam orçamento",
   "MSG-028": "MSG-028: Personalização carregada. Você pode alterar peças à vontade.",
   "MSG-039": "MSG-039: Eviction Policy Triggered. Store payload expired.",
+  "MSG-040": "MSG-040: Configuração importada com sucesso.",
   landing: {
     hero: {
       status: "SYS_STATUS: MOTOR_DETERMINISTICO_ATIVO",
@@ -203,13 +204,16 @@ export const dictionary = {
     },
     alerts: {
       incompatibilityTitle: "Alerta de Incompatibilidade",
-      affectedComponents: "Componentes Afetados"
+      affectedComponents: "Componentes Afetados",
+      importConfirmTitle: "Importar Configuração Compartilhada?",
+      importConfirmDesc: "Atenção! Você possui uma montagem em andamento. Ao carregar a nova configuração, seu progresso atual será totalmente descartado. Deseja continuar?"
     },
     actions: {
       replace: "Substituir",
       cancel: "Cancelar",
       confirmPurge: "Confirmar Expurgo",
-      share: "Compartilhar Montagem"
+      share: "Compartilhar Montagem",
+      confirm: "Confirmar"
     },
     sidebar: {
       title: "Grafo de Arquitetura"

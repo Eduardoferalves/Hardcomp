@@ -58,31 +58,57 @@ export function Builder() {
     purgedCategories: []
   });
 
+  const [pendingImportParam, setPendingImportParam] = React.useState<string | null>(null);
+  const [confirmImportDialogOpen, setConfirmImportDialogOpen] = React.useState(false);
+
+  const executeImport = React.useCallback((param: string) => {
+    const decodedIds = decodeBuildFromURL(param);
+    if (!decodedIds) {
+      toast.error(t('builder.messages.importError' as any));
+    } else {
+      const componentsMap: Record<ComponentCategory, Componente | null> = {
+        CPU: null, Mobo: null, RAM: null, GPU: null, Storage: null, PSU: null
+      };
+      
+      decodedIds.forEach(id => {
+        const comp = CATALOGO_HARDWARE.find(c => c.id === id);
+        if (comp) {
+          componentsMap[comp.categoria] = comp;
+        }
+      });
+
+      const anchor = componentsMap.CPU ? 'CPU' : (componentsMap.Mobo ? 'Mobo' : null);
+      loadPrebuiltSetup(componentsMap, anchor || 'CPU', false);
+      toast.success(t('MSG-040'));
+    }
+    setSearchParams({});
+  }, [loadPrebuiltSetup, setSearchParams, t]);
+
   React.useEffect(() => {
     const buildParam = searchParams.get('build');
     if (buildParam) {
-      const decodedIds = decodeBuildFromURL(buildParam);
-      if (!decodedIds) {
-        toast.error(t('builder.messages.importError' as any));
-        setSearchParams({});
+      if (!isColdStart) {
+        setPendingImportParam(buildParam);
+        setConfirmImportDialogOpen(true);
       } else {
-        const componentsMap: Record<ComponentCategory, Componente | null> = {
-          CPU: null, Mobo: null, RAM: null, GPU: null, Storage: null, PSU: null
-        };
-        
-        decodedIds.forEach(id => {
-          const comp = CATALOGO_HARDWARE.find(c => c.id === id);
-          if (comp) {
-            componentsMap[comp.categoria] = comp;
-          }
-        });
-
-        const anchor = componentsMap.CPU ? 'CPU' : (componentsMap.Mobo ? 'Mobo' : null);
-        loadPrebuiltSetup(componentsMap, anchor);
-        setSearchParams({});
+        executeImport(buildParam);
       }
     }
-  }, [searchParams, setSearchParams, loadPrebuiltSetup, t]);
+  }, [searchParams, isColdStart, executeImport]);
+
+  const handleConfirmImport = () => {
+    if (pendingImportParam) {
+      executeImport(pendingImportParam);
+    }
+    setPendingImportParam(null);
+    setConfirmImportDialogOpen(false);
+  };
+
+  const handleCancelImport = () => {
+    setPendingImportParam(null);
+    setConfirmImportDialogOpen(false);
+    setSearchParams({});
+  };
 
   const allCategories = [
     { id: "CPU", label: t('builder.categories.selectProcessor'), icon: Cpu },
@@ -397,6 +423,33 @@ export function Builder() {
               className="bg-[#FF3B30] text-white hover:bg-[#FF3B30]/80 shadow-[0_0_15px_rgba(255,59,48,0.2)] hover:shadow-[0_0_25px_rgba(255,59,48,0.4)] border-transparent transition-all"
             >
               {t('builder.actions.confirmPurge' as any)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmImportDialogOpen} onOpenChange={setConfirmImportDialogOpen}>
+        <AlertDialogContent className="bg-[#1E1E1E] border-white/10 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white text-xl">
+              {t('builder.alerts.importConfirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60 text-base leading-relaxed">
+              {t('builder.alerts.importConfirmDesc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 border-t border-white/5 pt-4">
+            <AlertDialogCancel 
+              onClick={handleCancelImport}
+              className="bg-transparent text-white border-white/10 hover:bg-white/5 cursor-pointer"
+            >
+              {t('builder.actions.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmImport}
+              className="bg-[#007BFF] text-white hover:bg-[#0056b3] shadow-[0_0_15px_rgba(0,123,255,0.2)] hover:shadow-[0_0_25px_rgba(0,123,255,0.4)] border-transparent transition-all cursor-pointer"
+            >
+              {t('builder.actions.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

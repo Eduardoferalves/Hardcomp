@@ -20,6 +20,9 @@ export function ComponentCard({ componente, isInvalid, motivoErro, onSelect }: C
 
   const cardContent = (
     <div 
+      role="button"
+      tabIndex={isInvalid ? -1 : 0} // Impede foco em cards inválidos
+      aria-disabled={isInvalid}
       className={`relative w-full rounded-2xl border p-5 flex flex-col gap-3 transition-all ${
         isInvalid 
           ? 'border-white/5 bg-[#1E1E1E]/50 opacity-40 grayscale cursor-not-allowed' 
@@ -27,6 +30,13 @@ export function ComponentCard({ componente, isInvalid, motivoErro, onSelect }: C
       }`}
       onClick={() => {
         if (!isInvalid && onSelect) onSelect();
+      }}
+      onKeyDown={(e) => {
+        if (isInvalid) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (onSelect) onSelect();
+        }
       }}
     >
       {/* Conteúdo do Card (Informações Técnicas) */}
