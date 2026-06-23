@@ -60,18 +60,9 @@ export function Builder() {
   const [confirmImportDialogOpen, setConfirmImportDialogOpen] = React.useState(false);
 
   const executeImport = React.useCallback((param: string) => {
-    const decodedIds = decodeBuildFromURL(param);
-    const importedComponents: Componente[] = [];
-    if (decodedIds) {
-      decodedIds.forEach(id => {
-        const comp = CATALOGO_HARDWARE.find(c => c.id === id);
-        if (comp) {
-          importedComponents.push(comp);
-        }
-      });
-    }
+    const importedComponents = decodeBuildFromURL(param);
 
-    if (!decodedIds || !validatePayloadIntegrity(importedComponents)) {
+    if (importedComponents.length === 0 || !validatePayloadIntegrity(importedComponents)) {
       toast.error(t('MSG-006'));
       window.history.replaceState({}, '', '/builder');
       setSearchParams({});
@@ -87,8 +78,11 @@ export function Builder() {
 
     const anchor = componentsMap.CPU ? 'CPU' : (componentsMap.Mobo ? 'Mobo' : null);
     loadPrebuiltSetup(componentsMap, anchor || 'CPU', false);
-    toast.success(t('MSG-040'));
+    
+    // BARREIRA DE UX (Obrigatório): Limpeza no Sucesso para evitar o Bug do Refresh
+    window.history.replaceState({}, '', '/builder');
     setSearchParams({});
+    toast.success(t('MSG-028'));
   }, [loadPrebuiltSetup, setSearchParams, t]);
 
   React.useEffect(() => {
@@ -96,31 +90,22 @@ export function Builder() {
     if (!hasHydrated) return;
 
     const buildParam = searchParams.get('build');
-    if (buildParam) {
-      const decodedIds = decodeBuildFromURL(buildParam);
-      const importedComponents: Componente[] = [];
-      if (decodedIds) {
-        decodedIds.forEach(id => {
-          const comp = CATALOGO_HARDWARE.find(c => c.id === id);
-          if (comp) {
-            importedComponents.push(comp);
-          }
-        });
-      }
+    if (!buildParam) return; // Cláusula de guarda imediata
 
-      if (!decodedIds || !validatePayloadIntegrity(importedComponents)) {
-        toast.error(t('MSG-006'));
-        window.history.replaceState({}, '', '/builder');
-        setSearchParams({});
-        return;
-      }
+    const importedComponents = decodeBuildFromURL(buildParam);
 
-      if (!isColdStart) {
-        setPendingImportParam(buildParam);
-        setConfirmImportDialogOpen(true);
-      } else {
-        executeImport(buildParam);
-      }
+    if (importedComponents.length === 0 || !validatePayloadIntegrity(importedComponents)) {
+      toast.error(t('MSG-006'));
+      window.history.replaceState({}, '', '/builder');
+      setSearchParams({});
+      return;
+    }
+
+    if (!isColdStart) {
+      setPendingImportParam(buildParam);
+      setConfirmImportDialogOpen(true);
+    } else {
+      executeImport(buildParam);
     }
   }, [searchParams, isColdStart, executeImport, hasHydrated, t, setSearchParams]);
 

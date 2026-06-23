@@ -30,6 +30,7 @@ export const useHardCompStore = create<HardCompState>()(
       ...getInitialState(),
 
       selectAnchor: (category: ComponentCategory) => {
+        if (get().pendingTopologyAction !== null) return;
         set(() => ({
           anchorComponent: category,
           isColdStart: false,
@@ -38,6 +39,7 @@ export const useHardCompStore = create<HardCompState>()(
       },
 
       selectComponent: (category: ComponentCategory, component: Componente) => {
+        if (get().pendingTopologyAction !== null) return;
         set((state) => ({
           selectedComponents: {
             ...state.selectedComponents,
@@ -68,7 +70,10 @@ export const useHardCompStore = create<HardCompState>()(
 
       setBudget: (budget: number) => set({ budget }),
       setWasFromRecommendation: (val: boolean) => set({ was_from_recommendation: val }),
-      setPendingTopologyAction: (action) => set({ pendingTopologyAction: action }),
+      setPendingTopologyAction: (action) => set((state) => {
+        if (state.pendingTopologyAction !== null && action !== null) return state;
+        return { pendingTopologyAction: action };
+      }),
       executeTopologyAction: () => {
         get().confirmTopologyAction();
       },
@@ -119,6 +124,7 @@ export const useHardCompStore = create<HardCompState>()(
         timestamp: new Date().toISOString()
       })),
       applyChange: (action, purgedCategories) => set((state) => {
+        if (state.pendingTopologyAction !== null) return state;
         const nextComps = { ...state.selectedComponents };
         if (action.type === 'REMOVE') {
           nextComps[action.category] = null;

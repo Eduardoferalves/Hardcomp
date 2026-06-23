@@ -1,3 +1,6 @@
+import { Componente } from "../../types/store";
+import { CATALOGO_HARDWARE } from "./mockData";
+
 export function encodeBuildToURL(componentIds: string[]): string {
   try {
     const jsonStr = JSON.stringify(componentIds);
@@ -7,15 +10,23 @@ export function encodeBuildToURL(componentIds: string[]): string {
   }
 }
 
-export function decodeBuildFromURL(base64String: string): string[] | null {
+// O payload da URL NUNCA carrega propriedades, apenas referências de chaves primárias.
+export const decodeBuildFromURL = (base64Payload: string): Componente[] => {
   try {
-    const jsonStr = atob(base64String);
-    const parsed = JSON.parse(jsonStr);
-    if (Array.isArray(parsed) && parsed.every(id => typeof id === 'string')) {
-      return parsed;
-    }
-    return null;
-  } catch (e) {
-    return null;
+    const jsonString = atob(base64Payload);
+    const ids: string[] = JSON.parse(jsonString); // Ex: ["cpu-123", "mobo-456"]
+
+    if (!Array.isArray(ids)) return [];
+
+    // O verdadeiro Zero-Trust: Reidrata as peças DIRETAMENTE da fonte de verdade (mockData/catalog), 
+    // ignorando qualquer atributo forjado pelo lado do cliente.
+    const hydratedComponents = ids
+      .map(id => CATALOGO_HARDWARE.find(c => c.id === id))
+      .filter((comp): comp is Componente => comp !== undefined);
+
+    return hydratedComponents;
+  } catch (error) {
+    console.error("FALHA_DECODIFICACAO_URL", error);
+    return [];
   }
-}
+};
