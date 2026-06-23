@@ -64,8 +64,7 @@ export function Builder() {
 
     if (importedComponents.length === 0 || !validatePayloadIntegrity(importedComponents)) {
       toast.error(t('MSG-006'));
-      window.history.replaceState({}, '', '/builder');
-      setSearchParams({});
+      setSearchParams({}, { replace: true });
       return;
     }
 
@@ -80,8 +79,7 @@ export function Builder() {
     loadPrebuiltSetup(componentsMap, anchor || 'CPU', false);
     
     // BARREIRA DE UX (Obrigatório): Limpeza no Sucesso para evitar o Bug do Refresh
-    window.history.replaceState({}, '', '/builder');
-    setSearchParams({});
+    setSearchParams({}, { replace: true });
     toast.success(t('MSG-028'));
   }, [loadPrebuiltSetup, setSearchParams, t]);
 
@@ -96,8 +94,7 @@ export function Builder() {
 
     if (importedComponents.length === 0 || !validatePayloadIntegrity(importedComponents)) {
       toast.error(t('MSG-006'));
-      window.history.replaceState({}, '', '/builder');
-      setSearchParams({});
+      setSearchParams({}, { replace: true });
       return;
     }
 
