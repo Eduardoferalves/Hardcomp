@@ -60,7 +60,7 @@ export function Hub() {
 
         {/* Card 2: Upgrade Existing Setup */}
         <Link 
-          to="/builder?mode=upgrade" 
+          to="/builder" 
           className="group relative flex flex-col bg-card border border-border p-8 rounded-xl hover:border-primary/50 transition-all hover:shadow-[0_0_30px_rgba(0,123,255,0.15)] overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
@@ -81,7 +81,7 @@ export function Hub() {
 
         {/* Card 3: Guided Wizard */}
         <Link 
-          to="/builder?mode=wizard" 
+          to="/wizard" 
           className="group relative flex flex-col bg-card border border-border p-8 rounded-xl hover:border-primary/50 transition-all hover:shadow-[0_0_30px_rgba(0,123,255,0.15)] overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
