@@ -37,11 +37,13 @@ export const CategoryGrid = React.memo(function CategoryGrid({
 
         if (isLocked) {
           return (
-            <div 
+            <button 
               key={cat.id} 
-              className="relative h-48 bg-[#1E1E1E]/50 backdrop-blur border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 opacity-40 cursor-not-allowed grayscale"
+              disabled
+              aria-disabled="true"
+              className="w-full relative h-48 bg-[#1E1E1E]/50 backdrop-blur border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 opacity-40 cursor-not-allowed grayscale"
             >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 px-4 py-2 bg-[#FF3B30] rounded-full border border-[#FF3B30]/50 flex items-center gap-2 shadow-lg backdrop-blur-md">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 px-4 py-2 bg-[#FF3B30] rounded-full border border-[#FF3B30]/50 flex items-center gap-2 shadow-lg backdrop-blur-md">
                 <Lock className="w-3.5 h-3.5 text-white" />
                 <span className="text-xs font-medium text-white whitespace-nowrap">{t('builder.badges.awaitingAnchor')}</span>
               </div>
@@ -52,7 +54,7 @@ export const CategoryGrid = React.memo(function CategoryGrid({
               <span className="font-semibold text-lg text-white/50">
                 {cat.label}
               </span>
-            </div>
+            </button>
           );
         }
 

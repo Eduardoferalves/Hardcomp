@@ -230,6 +230,12 @@ export const dictionary = {
       shareSuccess: "Link copiado para a área de transferência.",
       importError: "O link da configuração está corrompido ou é inválido."
     },
+    recovery: {
+      systemMode: "[SISTEMA EM MODO DE RECOVERY]",
+      title: "Falha crítica no processamento dos dados técnicos",
+      description: "Detectamos dados incompatíveis ou corrompidos na configuração atual. Sua máquina foi pausada para segurança.",
+      reset: "Resetar Configuração"
+    },
     footer: {
       totalInvestment: "Investimento Total",
       totalTdp: "Consumo Total TDP",

@@ -204,10 +204,10 @@ export function Builder() {
       <DataEngineErrorBoundary 
         fallback={
           <div className="w-full h-full flex flex-col items-center justify-center bg-[#121212] text-center p-10 border border-[#FF3B30]/30 rounded-2xl m-4">
-            <span className="text-[#FF3B30] font-mono text-sm font-bold uppercase tracking-wider mb-2">[SISTEMA EM MODO DE RECOVERY]</span>
-            <h3 className="text-xl font-bold text-white mb-2">Falha crítica no processamento dos dados técnicos</h3>
+            <span className="text-[#FF3B30] font-mono text-sm font-bold uppercase tracking-wider mb-2">{t('builder.recovery.systemMode' as any)}</span>
+            <h3 className="text-xl font-bold text-white mb-2">{t('builder.recovery.title' as any)}</h3>
             <p className="text-white/60 text-sm max-w-md font-sans mb-6">
-              Detectamos dados incompatíveis ou corrompidos na configuração atual. Sua máquina foi pausada para segurança.
+              {t('builder.recovery.description' as any)}
             </p>
             <button 
               onClick={() => {
@@ -216,7 +216,7 @@ export function Builder() {
               }}
               className="px-6 py-2.5 bg-[#FF3B30] hover:bg-[#FF3B30]/80 text-white rounded-lg text-sm font-semibold transition-all shadow-[0_0_15px_rgba(255,59,48,0.2)] cursor-pointer"
             >
-              Resetar Configuração
+              {t('builder.recovery.reset' as any)}
             </button>
           </div>
         }
