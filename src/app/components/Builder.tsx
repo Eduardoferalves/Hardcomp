@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "./ui/alert-dialog";
 import { CATALOGO_HARDWARE } from "../lib/engine/mockData";
 import { ComponentCard } from "./Builder/ComponentCard";
-import { checkSocket, checkRamGeneration, getCascadingPurge } from "../lib/engine/specification";
+import { checkSocket, checkRamGeneration, getCascadingPurge, validatePayloadIntegrity } from "../lib/engine/specification";
 import { decodeBuildFromURL } from "../lib/engine/serializer";
 import { Componente, ComponentCategory } from "../types/store";
 import { toast } from "sonner";
@@ -61,24 +61,33 @@ export function Builder() {
 
   const executeImport = React.useCallback((param: string) => {
     const decodedIds = decodeBuildFromURL(param);
-    if (!decodedIds) {
-      toast.error(t('builder.messages.importError' as any));
-    } else {
-      const componentsMap: Record<ComponentCategory, Componente | null> = {
-        CPU: null, Mobo: null, RAM: null, GPU: null, Storage: null, PSU: null
-      };
-      
+    const importedComponents: Componente[] = [];
+    if (decodedIds) {
       decodedIds.forEach(id => {
         const comp = CATALOGO_HARDWARE.find(c => c.id === id);
         if (comp) {
-          componentsMap[comp.categoria] = comp;
+          importedComponents.push(comp);
         }
       });
-
-      const anchor = componentsMap.CPU ? 'CPU' : (componentsMap.Mobo ? 'Mobo' : null);
-      loadPrebuiltSetup(componentsMap, anchor || 'CPU', false);
-      toast.success(t('MSG-040'));
     }
+
+    if (!decodedIds || !validatePayloadIntegrity(importedComponents)) {
+      toast.error(t('MSG-006'));
+      window.history.replaceState({}, '', '/builder');
+      setSearchParams({});
+      return;
+    }
+
+    const componentsMap: Record<ComponentCategory, Componente | null> = {
+      CPU: null, Mobo: null, RAM: null, GPU: null, Storage: null, PSU: null
+    };
+    importedComponents.forEach(comp => {
+      componentsMap[comp.categoria] = comp;
+    });
+
+    const anchor = componentsMap.CPU ? 'CPU' : (componentsMap.Mobo ? 'Mobo' : null);
+    loadPrebuiltSetup(componentsMap, anchor || 'CPU', false);
+    toast.success(t('MSG-040'));
     setSearchParams({});
   }, [loadPrebuiltSetup, setSearchParams, t]);
 
@@ -88,6 +97,24 @@ export function Builder() {
 
     const buildParam = searchParams.get('build');
     if (buildParam) {
+      const decodedIds = decodeBuildFromURL(buildParam);
+      const importedComponents: Componente[] = [];
+      if (decodedIds) {
+        decodedIds.forEach(id => {
+          const comp = CATALOGO_HARDWARE.find(c => c.id === id);
+          if (comp) {
+            importedComponents.push(comp);
+          }
+        });
+      }
+
+      if (!decodedIds || !validatePayloadIntegrity(importedComponents)) {
+        toast.error(t('MSG-006'));
+        window.history.replaceState({}, '', '/builder');
+        setSearchParams({});
+        return;
+      }
+
       if (!isColdStart) {
         setPendingImportParam(buildParam);
         setConfirmImportDialogOpen(true);
@@ -95,7 +122,7 @@ export function Builder() {
         executeImport(buildParam);
       }
     }
-  }, [searchParams, isColdStart, executeImport, hasHydrated]);
+  }, [searchParams, isColdStart, executeImport, hasHydrated, t, setSearchParams]);
 
   React.useEffect(() => {
     if (hasHydrated && wasFromRecommendation) {
@@ -141,7 +168,8 @@ export function Builder() {
       setPendingTopologyAction({
         type: 'REMOVE',
         targetCategory: catId,
-        orphanedCategories: purges
+        orphanedCategories: purges,
+        orphans: purges
       });
     } else {
       applyChange({ type: 'REMOVE', category: catId }, []);
@@ -155,7 +183,8 @@ export function Builder() {
         type: 'SWAP',
         targetCategory: catId,
         newComponent: comp,
-        orphanedCategories: purges
+        orphanedCategories: purges,
+        orphans: purges
       });
     } else {
       applyChange({ type: 'REPLACE', category: catId, newComponent: comp }, []);
@@ -398,8 +427,14 @@ export function Builder() {
                 {pendingTopologyAction && (
                   <>
                     {pendingTopologyAction.type === 'REMOVE' 
-                      ? t('builder.messages.msg004' as any).replace('{comp}', selectedComponents[pendingTopologyAction.targetCategory]?.nome_comercial || '').replace('{count}', pendingTopologyAction.orphanedCategories.length.toString())
-                      : t('builder.messages.msg005' as any).replace('{count}', pendingTopologyAction.orphanedCategories.length.toString())
+                      ? t('MSG-004', { 
+                          piece: selectedComponents[pendingTopologyAction.targetCategory]?.nome_comercial || pendingTopologyAction.targetCategory, 
+                          n: pendingTopologyAction.orphans.length 
+                        })
+                      : t('MSG-005', { 
+                          piece: pendingTopologyAction.newComponent?.nome_comercial || pendingTopologyAction.targetCategory, 
+                          n: pendingTopologyAction.orphans.length 
+                        })
                     }
                     <div className="mt-4 p-3 bg-black/40 border border-[#FF3B30]/20 rounded-lg">
                       <span className="text-xs font-mono text-[#FF3B30] uppercase tracking-wider mb-2 block">{t('builder.alerts.affectedComponents' as any)}</span>

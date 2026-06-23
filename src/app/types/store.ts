@@ -25,6 +25,7 @@ export interface TopologicalIntercept {
   targetCategory: ComponentCategory;
   newComponent?: Componente; // Presente apenas no SWAP
   orphanedCategories: ComponentCategory[]; // Peças que serão invalidadas
+  orphans: ComponentCategory[]; // Peças que serão invalidadas (alias)
 }
 
 export interface HardCompState {
@@ -44,6 +45,7 @@ export interface HardCompState {
   setWasFromRecommendation: (val: boolean) => void;
   setPendingTopologyAction: (action: TopologicalIntercept | null) => void;
   executeTopologyAction: () => void;
+  confirmTopologyAction: () => void;
   loadPrebuiltSetup: (componentsMap: Record<ComponentCategory, Componente | null>, anchor: ComponentCategory, wasFromRec?: boolean) => void;
   applyChange: (
     action: { type: 'REMOVE' | 'REPLACE'; category: ComponentCategory; newComponent?: Componente },

@@ -6,6 +6,9 @@ export const dictionary = {
   "MSG-028": "MSG-028: Personalização carregada. Você pode alterar peças à vontade.",
   "MSG-039": "MSG-039: Eviction Policy Triggered. Store payload expired.",
   "MSG-040": "MSG-040: Configuração importada com sucesso.",
+  "MSG-004": "Remover [piece] invalidará [n] peças. Deseja recomeçar a montagem?",
+  "MSG-005": "Trocar [piece] causará remoção de [n] componentes incompatíveis. Confirmar?",
+  "MSG-006": "Configuração inválida detectada. Processo abortado por segurança.",
   landing: {
     hero: {
       status: "SYS_STATUS: MOTOR_DETERMINISTICO_ATIVO",

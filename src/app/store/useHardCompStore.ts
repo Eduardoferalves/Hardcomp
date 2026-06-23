@@ -70,16 +70,47 @@ export const useHardCompStore = create<HardCompState>()(
       setWasFromRecommendation: (val: boolean) => set({ was_from_recommendation: val }),
       setPendingTopologyAction: (action) => set({ pendingTopologyAction: action }),
       executeTopologyAction: () => {
-        const pending = get().pendingTopologyAction;
-        if (!pending) return;
-
-        const action = pending.type === 'REMOVE' 
-          ? { type: 'REMOVE' as const, category: pending.targetCategory }
-          : { type: 'REPLACE' as const, category: pending.targetCategory, newComponent: pending.newComponent };
-
-        get().applyChange(action, pending.orphanedCategories);
-        set({ pendingTopologyAction: null });
+        get().confirmTopologyAction();
       },
+      confirmTopologyAction: () => set((state) => {
+        if (!state.pendingTopologyAction) return state;
+        
+        const { type, targetCategory, newComponent, orphans, orphanedCategories } = state.pendingTopologyAction;
+        const newSelection = { ...state.selectedComponents };
+        
+        const catsToRemove = orphans || orphanedCategories || [];
+        catsToRemove.forEach(orphanCat => { newSelection[orphanCat] = null; });
+        
+        if (type === 'SWAP' && newComponent) {
+          newSelection[targetCategory] = newComponent;
+        } else if (type === 'REMOVE') {
+          newSelection[targetCategory] = null;
+        }
+        
+        // Barreira de Reversão de FSM: Se o carrinho esvaziou totalmente, reativa o Cold Start
+        const hasActiveComponents = Object.values(newSelection).some(comp => comp !== null);
+        let anchor = state.anchorComponent;
+
+        if (!hasActiveComponents) {
+          anchor = null;
+        } else {
+          if (type === 'SWAP' && (targetCategory === 'CPU' || targetCategory === 'Mobo')) {
+            anchor = targetCategory;
+          } else if (newSelection.CPU) {
+            anchor = 'CPU';
+          } else if (newSelection.Mobo) {
+            anchor = 'Mobo';
+          }
+        }
+        
+        return { 
+          selectedComponents: newSelection, 
+          pendingTopologyAction: null,
+          isColdStart: !hasActiveComponents, // Reverte a trava inicial automaticamente
+          anchorComponent: anchor,
+          timestamp: new Date().toISOString()
+        };
+      }),
       loadPrebuiltSetup: (componentsMap, anchor, wasFromRec = false) => set(() => ({
         selectedComponents: componentsMap,
         anchorComponent: anchor,

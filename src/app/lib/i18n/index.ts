@@ -11,22 +11,33 @@ type LeafPaths<T, D extends string = "."> = T extends Record<string, any>
 export type DicionarioKeys = LeafPaths<typeof dictionary>;
 
 export function useTranslation() {
-  const t = (path: DicionarioKeys | string, params?: Record<string, string | number>): string => {
-    let result = path.split(".").reduce((obj: unknown, key: string) => {
-      if (obj && typeof obj === "object" && key in obj) {
-        return (obj as Record<string, unknown>)[key];
+  const t = (key: string, params?: Record<string, string | number>): string => {
+    let text = key.split(".").reduce((obj: any, k: string) => {
+      if (obj && typeof obj === "object" && k in obj) {
+        return obj[k];
       }
-      return obj;
+      return undefined;
     }, dictionary) as string;
 
-    if (params && typeof result === 'string') {
-      Object.entries(params).forEach(([k, v]) => {
-        result = result.replace(new RegExp(`{{${k}}}`, 'g'), String(v));
-      });
+    if (!text && typeof dictionary === 'object' && key in dictionary) {
+      text = (dictionary as any)[key];
     }
 
-    return result || path;
+    if (!text) {
+      text = key;
+    }
+    
+    // Motor de Interpolação Lexical
+    if (params && typeof text === 'string') {
+      Object.entries(params).forEach(([paramKey, paramValue]) => {
+        // Substitui padrões como [Peça] ou [N] pelos valores dinâmicos
+        const regex = new RegExp(`\\[${paramKey}\\]`, 'gi');
+        text = text.replace(regex, String(paramValue));
+      });
+    }
+    
+    return text;
   };
-  
+
   return { t };
 }

@@ -67,3 +67,20 @@ export function getCascadingPurge(
 
   return Array.from(toPurge);
 }
+
+export const validatePayloadIntegrity = (components: Componente[]): boolean => {
+  const cpu = components.find(c => c.categoria === 'CPU');
+  const mobo = components.find(c => c.categoria === 'Mobo');
+  const ram = components.find(c => c.categoria === 'RAM');
+  const psu = components.find(c => c.categoria === 'PSU');
+
+  // 1. Validação Topológica
+  if (cpu && mobo && !checkSocket(cpu, mobo)) return false;
+  if (mobo && ram && !checkRamGeneration(mobo, ram)) return false;
+
+  // 2. Validação Elétrica (Se houver fonte, ela deve suportar o payload)
+  const consumersList = components.filter(c => c.categoria !== 'PSU');
+  if (psu && !checkPowerLimit(consumersList, psu).valid) return false;
+
+  return true; // Payload íntegro
+};
