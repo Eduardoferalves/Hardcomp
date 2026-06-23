@@ -3,8 +3,7 @@ import { persist } from "zustand/middleware";
 import { useMemo } from "react";
 import { HardCompState, ComponentCategory, Componente, TopologicalIntercept } from "../types/store";
 import { checkSocket, checkRamGeneration, checkPowerLimit } from "../lib/engine/specification";
-import { toast } from "sonner";
-import { dictionary } from "../lib/i18n/dictionary";
+import { CATALOGO_HARDWARE } from "../lib/engine/mockData";
 
 const EVICTION_DAYS = 7;
 const DEFAULT_BUDGET = 850;
@@ -66,7 +65,31 @@ export const useHardCompStore = create<HardCompState>()(
           if (diffDays > EVICTION_DAYS) {
             console.warn("MSG-039: Eviction Policy Triggered. Store payload expired.");
             get().clearBuild();
+            return;
           }
+        }
+        
+        // Reconciliação Transacional de Preços (Offline-First Seguro)
+        const newComps = { ...state.selectedComponents };
+        let hasChanges = false;
+        
+        (Object.keys(newComps) as ComponentCategory[]).forEach(cat => {
+          const comp = newComps[cat];
+          if (comp) {
+            const freshComp = CATALOGO_HARDWARE.find(c => c.id === comp.id);
+            if (freshComp) {
+              newComps[cat] = freshComp;
+              hasChanges = true;
+            } else {
+              // Componente não existe mais no catálogo
+              newComps[cat] = null;
+              hasChanges = true;
+            }
+          }
+        });
+
+        if (hasChanges) {
+          set({ selectedComponents: newComps });
         }
       },
 
@@ -178,7 +201,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
     if (event.key === 'hardcomp-storage') {
       useHardCompStore.persist.rehydrate();
-      toast.info(dictionary.builder.messages.syncCrossTab);
+      window.dispatchEvent(new Event('APP_SYNC_TRIGGERED'));
     }
   });
 }

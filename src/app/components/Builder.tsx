@@ -129,6 +129,14 @@ export function Builder() {
     }
   }, [hasHydrated, wasFromRecommendation, setWasFromRecommendation, t]);
 
+  React.useEffect(() => {
+    const handleSync = () => {
+      toast.info(t('builder.messages.syncCrossTab' as any));
+    };
+    window.addEventListener('APP_SYNC_TRIGGERED', handleSync);
+    return () => window.removeEventListener('APP_SYNC_TRIGGERED', handleSync);
+  }, [t]);
+
   const handleConfirmImport = () => {
     if (pendingImportParam) {
       executeImport(pendingImportParam);
