@@ -74,4 +74,4 @@ export const TopologySidebar = React.memo(function TopologySidebar({ selectedCom
       </div>
     </aside>
   );
-}
+});

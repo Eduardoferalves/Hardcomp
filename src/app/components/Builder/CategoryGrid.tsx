@@ -102,4 +102,4 @@ export const CategoryGrid = React.memo(function CategoryGrid({
       })}
     </div>
   );
-}
+});
