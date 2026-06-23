@@ -32,8 +32,17 @@ export function Builder() {
   const selectedComponents = useHardCompStore((state) => state.selectedComponents);
   const anchorComponent = useHardCompStore((state) => state.anchorComponent);
   const applyChange = useHardCompStore((state) => state.applyChange);
+  const wasFromRecommendation = useHardCompStore((state) => state.was_from_recommendation);
+  const setWasFromRecommendation = useHardCompStore((state) => state.setWasFromRecommendation);
 
   const [sheetOpen, setSheetOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (wasFromRecommendation) {
+      toast.success(t('MSG-028'));
+      setWasFromRecommendation(false);
+    }
+  }, [wasFromRecommendation, setWasFromRecommendation, t]);
   const [activeSheetCategory, setActiveSheetCategory] = React.useState<ComponentCategory | null>(null);
 
   const [interception, setInterception] = React.useState<{
@@ -139,26 +148,26 @@ export function Builder() {
       if (comp.categoria === 'CPU' && selectedComponents.Mobo && anchorComponent !== 'CPU') {
         if (!checkSocket(comp, selectedComponents.Mobo)) {
           isInvalid = true;
-          motivoErro = 'builder.messages.msg001';
+          motivoErro = 'MSG-001';
         }
       }
       if (comp.categoria === 'Mobo' && selectedComponents.CPU && anchorComponent !== 'Mobo') {
         if (!checkSocket(selectedComponents.CPU, comp)) {
           isInvalid = true;
-          motivoErro = 'builder.messages.msg001';
+          motivoErro = 'MSG-001';
         }
       }
       
       if (comp.categoria === 'RAM' && selectedComponents.Mobo) {
         if (!checkRamGeneration(selectedComponents.Mobo, comp)) {
           isInvalid = true;
-          motivoErro = 'builder.messages.msg003';
+          motivoErro = 'MSG-003';
         }
       }
       if (comp.categoria === 'Mobo' && selectedComponents.RAM) {
         if (!checkRamGeneration(comp, selectedComponents.RAM)) {
           isInvalid = true;
-          motivoErro = 'builder.messages.msg003';
+          motivoErro = 'MSG-003';
         }
       }
 

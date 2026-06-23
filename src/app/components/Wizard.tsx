@@ -34,8 +34,7 @@ export function Wizard() {
     });
 
     const anchor = map.CPU ? 'CPU' : 'Mobo';
-    loadPrebuiltSetup(map, anchor as ComponentCategory);
-    toast.success(t('wizard.messages.msg028' as any));
+    loadPrebuiltSetup(map, anchor as ComponentCategory, true);
     navigate('/builder');
   };
 
@@ -158,7 +157,7 @@ export function Wizard() {
 
             {/* RESULTS GRID */}
             <div className="px-8 md:px-10">
-              {filteredBuilds.length > 0 && (
+              {filteredBuilds.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredBuilds.map(build => (
                     <div key={build.id_build_curada} className="p-5 border border-white/10 rounded-2xl bg-white/5 flex flex-col justify-between transition-colors hover:border-[#007BFF]/30">
@@ -185,6 +184,13 @@ export function Wizard() {
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-[#FF3B30]/30 rounded-2xl bg-[#FF3B30]/5 text-center">
+                  <span className="text-[#FF3B30] font-mono text-xs font-bold uppercase tracking-wider mb-2">EMPTY_STATE // MSG-023</span>
+                  <p className="text-white/80 text-sm max-w-md font-sans">
+                    {t('MSG-023')}
+                  </p>
+                </div>
               )}
             </div>
 
@@ -207,7 +213,7 @@ export function Wizard() {
               <div className={`text-[11px] font-mono tracking-wider ${filteredBuilds.length > 0 ? 'text-green-400' : 'text-[#FF3B30]'}`}>
                 {filteredBuilds.length > 0 
                   ? t('wizard.messages.matchesFound' as any, { count: filteredBuilds.length })
-                  : t('wizard.messages.budgetInsufficient')}
+                  : t('MSG-023')}
               </div>
             </div>
           </div>

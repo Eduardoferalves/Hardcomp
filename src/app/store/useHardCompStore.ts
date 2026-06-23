@@ -20,6 +20,7 @@ const getInitialState = () => ({
   isColdStart: true,
   timestamp: new Date().toISOString(),
   budget: DEFAULT_BUDGET,
+  was_from_recommendation: false,
 });
 
 export const useHardCompStore = create<HardCompState>()(
@@ -65,10 +66,12 @@ export const useHardCompStore = create<HardCompState>()(
       },
 
       setBudget: (budget: number) => set({ budget }),
-      loadPrebuiltSetup: (componentsMap, anchor) => set(() => ({
+      setWasFromRecommendation: (val: boolean) => set({ was_from_recommendation: val }),
+      loadPrebuiltSetup: (componentsMap, anchor, wasFromRec = false) => set(() => ({
         selectedComponents: componentsMap,
         anchorComponent: anchor,
         isColdStart: false,
+        was_from_recommendation: wasFromRec,
         timestamp: new Date().toISOString()
       })),
       applyChange: (action, purgedCategories) => set((state) => {
@@ -143,20 +146,20 @@ export const useBuildMetrics = () => {
     // 1. Validação de Soquete (CPU ↔ Mobo)
     if (cpu && mobo && !checkSocket(cpu, mobo)) {
       isBuildValid = false;
-      errorMessage = "builder.messages.msg001";
+      errorMessage = "MSG-001";
     }
 
     // 2. Validação de Geração de RAM (Mobo ↔ RAM)
     if (mobo && ram && !checkRamGeneration(mobo, ram)) {
       isBuildValid = false;
-      errorMessage = "builder.messages.msg003";
+      errorMessage = "MSG-003";
     }
 
     // 3. Restrição Elétrica Zero-Trust: Passa apenas os consumidores para validação contra a PSU
     const powerCheck = checkPowerLimit(consumersList, psu);
     if (psu && !powerCheck.valid) {
       isBuildValid = false;
-      errorMessage = "builder.messages.msg002";
+      errorMessage = "MSG-002";
     }
 
     const isOverBudget = totalInvestment > budget;

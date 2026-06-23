@@ -26,13 +26,22 @@ export function Landing() {
             {t('landing.hero.subtitle')}
           </p>
           
-          <Link 
-            to="/hub"
-            className="group px-8 py-4 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(0,123,255,0.4)] hover:shadow-[0_0_30px_rgba(0,123,255,0.6)] flex items-center gap-3 text-lg"
-          >
-            {t('landing.hero.cta')}
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 w-full">
+            <Link 
+              to="/builder?mode=wizard"
+              className="group px-6 py-4 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(0,123,255,0.4)] hover:shadow-[0_0_30px_rgba(0,123,255,0.6)] flex items-center justify-center gap-3 text-base sm:text-lg flex-1"
+            >
+              <span>{t('landing.hero.ctaWizard')}</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link 
+              to="/builder"
+              className="group px-6 py-4 bg-[#1E1E1E] hover:bg-[#1E1E1E]/80 text-white/90 border border-white/10 hover:border-white/20 font-semibold rounded-md transition-all flex items-center justify-center gap-3 text-base sm:text-lg flex-1"
+            >
+              <span>{t('landing.hero.ctaManual')}</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
         </div>
 
         {/* Right Side: Visual Showcase - Poka-Yoke Demonstration */}

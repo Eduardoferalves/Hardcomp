@@ -1,11 +1,19 @@
 export const dictionary = {
+  "MSG-001": "MSG-001: Incompatibilidade de Socket (Processador/Placa-Mãe).",
+  "MSG-002": "MSG-002: TDP excede 80% da capacidade da Fonte de Alimentação.",
+  "MSG-003": "MSG-003: Incompatibilidade de Geração de Memória RAM.",
+  "MSG-023": "MSG-023: Todas builds violam orçamento",
+  "MSG-028": "MSG-028: Personalização carregada. Você pode alterar peças à vontade.",
+  "MSG-039": "MSG-039: Eviction Policy Triggered. Store payload expired.",
   landing: {
     hero: {
       status: "SYS_STATUS: MOTOR_DETERMINISTICO_ATIVO",
       title1: "Não compre apenas hardware.",
       title2: "Compre a certeza matemática de que funciona.",
       subtitle: "O primeiro construtor de PC Zero-Trust. Bloqueamos incompatibilidades físicas e elétricas antes mesmo do seu clique.",
-      cta: "Entrar no Hub do Construtor"
+      cta: "Entrar no Hub do Construtor",
+      ctaWizard: "Preciso de Recomendação (Assistente Guiado)",
+      ctaManual: "Montar do Zero (Painel Avançado)"
     },
     features: {
       title: "A Matemática da Compatibilidade",

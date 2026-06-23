@@ -26,13 +26,15 @@ export interface HardCompState {
   isColdStart: boolean;
   timestamp: string; // ISO 8601
   budget: number;
+  was_from_recommendation: boolean;
 
   selectAnchor: (category: ComponentCategory) => void;
   selectComponent: (category: ComponentCategory, component: Componente) => void;
   clearBuild: () => void;
   hydrateStore: () => void;
   setBudget: (budget: number) => void;
-  loadPrebuiltSetup: (componentsMap: Record<ComponentCategory, Componente | null>, anchor: ComponentCategory) => void;
+  setWasFromRecommendation: (val: boolean) => void;
+  loadPrebuiltSetup: (componentsMap: Record<ComponentCategory, Componente | null>, anchor: ComponentCategory, wasFromRec?: boolean) => void;
   applyChange: (
     action: { type: 'REMOVE' | 'REPLACE'; category: ComponentCategory; newComponent?: Componente },
     purgedCategories: ComponentCategory[]
