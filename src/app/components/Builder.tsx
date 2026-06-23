@@ -151,10 +151,6 @@ export function Builder() {
     setSearchParams({});
   };
 
-  if (!hasHydrated) {
-    return <div className="w-screen h-screen bg-[#121212] animate-pulse" />;
-  }
-
   const handleRemoveAttempt = React.useCallback((catId: ComponentCategory) => {
     const purges = getCascadingPurge(useHardCompStore.getState(), { type: 'REMOVE', category: catId });
     if (purges.length > 0) {
@@ -189,6 +185,10 @@ export function Builder() {
     setActiveSheetCategory(catId);
     setSheetOpen(true);
   }, [setActiveSheetCategory, setSheetOpen]);
+
+  if (!hasHydrated) {
+    return <div className="w-screen h-screen bg-[#121212] animate-pulse" />;
+  }
 
   const renderInventory = () => {
     if (!activeSheetCategory) return null;
