@@ -20,6 +20,13 @@ export interface Componente {
   preco: number;
 }
 
+export interface TopologicalIntercept {
+  type: 'REMOVE' | 'SWAP';
+  targetCategory: ComponentCategory;
+  newComponent?: Componente; // Presente apenas no SWAP
+  orphanedCategories: ComponentCategory[]; // Peças que serão invalidadas
+}
+
 export interface HardCompState {
   selectedComponents: Record<ComponentCategory, Componente | null>;
   anchorComponent: ComponentCategory | null;
@@ -27,6 +34,7 @@ export interface HardCompState {
   timestamp: string; // ISO 8601
   budget: number;
   was_from_recommendation: boolean;
+  pendingTopologyAction: TopologicalIntercept | null;
 
   selectAnchor: (category: ComponentCategory) => void;
   selectComponent: (category: ComponentCategory, component: Componente) => void;
@@ -34,6 +42,8 @@ export interface HardCompState {
   hydrateStore: () => void;
   setBudget: (budget: number) => void;
   setWasFromRecommendation: (val: boolean) => void;
+  setPendingTopologyAction: (action: TopologicalIntercept | null) => void;
+  executeTopologyAction: () => void;
   loadPrebuiltSetup: (componentsMap: Record<ComponentCategory, Componente | null>, anchor: ComponentCategory, wasFromRec?: boolean) => void;
   applyChange: (
     action: { type: 'REMOVE' | 'REPLACE'; category: ComponentCategory; newComponent?: Componente },

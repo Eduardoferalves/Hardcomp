@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useMemo } from "react";
-import { HardCompState, ComponentCategory, Componente } from "../types/store";
+import { HardCompState, ComponentCategory, Componente, TopologicalIntercept } from "../types/store";
 import { checkSocket, checkRamGeneration, checkPowerLimit } from "../lib/engine/specification";
 
 const EVICTION_DAYS = 7;
@@ -21,6 +21,7 @@ const getInitialState = () => ({
   timestamp: new Date().toISOString(),
   budget: DEFAULT_BUDGET,
   was_from_recommendation: false,
+  pendingTopologyAction: null as TopologicalIntercept | null,
 });
 
 export const useHardCompStore = create<HardCompState>()(
@@ -67,6 +68,18 @@ export const useHardCompStore = create<HardCompState>()(
 
       setBudget: (budget: number) => set({ budget }),
       setWasFromRecommendation: (val: boolean) => set({ was_from_recommendation: val }),
+      setPendingTopologyAction: (action) => set({ pendingTopologyAction: action }),
+      executeTopologyAction: () => {
+        const pending = get().pendingTopologyAction;
+        if (!pending) return;
+
+        const action = pending.type === 'REMOVE' 
+          ? { type: 'REMOVE' as const, category: pending.targetCategory }
+          : { type: 'REPLACE' as const, category: pending.targetCategory, newComponent: pending.newComponent };
+
+        get().applyChange(action, pending.orphanedCategories);
+        set({ pendingTopologyAction: null });
+      },
       loadPrebuiltSetup: (componentsMap, anchor, wasFromRec = false) => set(() => ({
         selectedComponents: componentsMap,
         anchorComponent: anchor,

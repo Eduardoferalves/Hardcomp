@@ -23,6 +23,7 @@ import { decodeBuildFromURL } from "../lib/engine/serializer";
 import { Componente, ComponentCategory } from "../types/store";
 import { toast } from "sonner";
 import { DataEngineErrorBoundary } from "./ErrorBoundary";
+import { useCatalogEvaluator } from "../lib/engine/useCatalogEvaluator";
 
 export function useHydrationGuard() {
   const [hydrated, setHydrated] = React.useState(false);
@@ -46,22 +47,14 @@ export function Builder() {
   const applyChange = useHardCompStore((state) => state.applyChange);
   const wasFromRecommendation = useHardCompStore((state) => state.was_from_recommendation);
   const setWasFromRecommendation = useHardCompStore((state) => state.setWasFromRecommendation);
+  const pendingTopologyAction = useHardCompStore((state) => state.pendingTopologyAction);
+  const setPendingTopologyAction = useHardCompStore((state) => state.setPendingTopologyAction);
+  const executeTopologyAction = useHardCompStore((state) => state.executeTopologyAction);
+
+  const evaluatedCatalog = useCatalogEvaluator(CATALOGO_HARDWARE, selectedComponents, anchorComponent);
 
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [activeSheetCategory, setActiveSheetCategory] = React.useState<ComponentCategory | null>(null);
-
-  const [interception, setInterception] = React.useState<{
-    isOpen: boolean;
-    type: 'REMOVE' | 'REPLACE';
-    category: ComponentCategory | null;
-    newComponent?: Componente;
-    purgedCategories: ComponentCategory[];
-  }>({
-    isOpen: false,
-    type: 'REMOVE',
-    category: null,
-    purgedCategories: []
-  });
 
   const [pendingImportParam, setPendingImportParam] = React.useState<string | null>(null);
   const [confirmImportDialogOpen, setConfirmImportDialogOpen] = React.useState(false);
@@ -145,11 +138,10 @@ export function Builder() {
   const handleRemoveAttempt = (catId: ComponentCategory) => {
     const purges = getCascadingPurge(useHardCompStore.getState(), { type: 'REMOVE', category: catId });
     if (purges.length > 0) {
-      setInterception({
-        isOpen: true,
+      setPendingTopologyAction({
         type: 'REMOVE',
-        category: catId,
-        purgedCategories: purges
+        targetCategory: catId,
+        orphanedCategories: purges
       });
     } else {
       applyChange({ type: 'REMOVE', category: catId }, []);
@@ -159,12 +151,11 @@ export function Builder() {
   const handleReplaceAttempt = (catId: ComponentCategory, comp: Componente) => {
     const purges = getCascadingPurge(useHardCompStore.getState(), { type: 'REPLACE', category: catId, newComponent: comp });
     if (purges.length > 0) {
-      setInterception({
-        isOpen: true,
-        type: 'REPLACE',
-        category: catId,
+      setPendingTopologyAction({
+        type: 'SWAP',
+        targetCategory: catId,
         newComponent: comp,
-        purgedCategories: purges
+        orphanedCategories: purges
       });
     } else {
       applyChange({ type: 'REPLACE', category: catId, newComponent: comp }, []);
@@ -173,56 +164,22 @@ export function Builder() {
   };
 
   const confirmInterception = () => {
-    if (interception.type === 'REMOVE' && interception.category) {
-      applyChange({ type: 'REMOVE', category: interception.category }, interception.purgedCategories);
-    } else if (interception.type === 'REPLACE' && interception.category && interception.newComponent) {
-      applyChange({ type: 'REPLACE', category: interception.category, newComponent: interception.newComponent }, interception.purgedCategories);
-      setSheetOpen(false);
-    }
-    setInterception(prev => ({ ...prev, isOpen: false }));
+    executeTopologyAction();
+    setSheetOpen(false);
   };
 
   const renderInventory = () => {
     if (!activeSheetCategory) return null;
-    const inventory = CATALOGO_HARDWARE.filter(c => c.categoria === activeSheetCategory);
+    const inventory = evaluatedCatalog.filter(item => item.component.categoria === activeSheetCategory);
 
-    return inventory.map((comp) => {
-      let isInvalid = false;
-      let motivoErro = "";
-
-      if (comp.categoria === 'CPU' && selectedComponents.Mobo && anchorComponent !== 'CPU') {
-        if (!checkSocket(comp, selectedComponents.Mobo)) {
-          isInvalid = true;
-          motivoErro = 'MSG-001';
-        }
-      }
-      if (comp.categoria === 'Mobo' && selectedComponents.CPU && anchorComponent !== 'Mobo') {
-        if (!checkSocket(selectedComponents.CPU, comp)) {
-          isInvalid = true;
-          motivoErro = 'MSG-001';
-        }
-      }
-      
-      if (comp.categoria === 'RAM' && selectedComponents.Mobo) {
-        if (!checkRamGeneration(selectedComponents.Mobo, comp)) {
-          isInvalid = true;
-          motivoErro = 'MSG-003';
-        }
-      }
-      if (comp.categoria === 'Mobo' && selectedComponents.RAM) {
-        if (!checkRamGeneration(comp, selectedComponents.RAM)) {
-          isInvalid = true;
-          motivoErro = 'MSG-003';
-        }
-      }
-
+    return inventory.map(({ component, isInvalid, conflictReason }) => {
       return (
         <ComponentCard 
-          key={comp.id}
-          componente={comp}
+          key={component.id}
+          componente={component}
           isInvalid={isInvalid}
-          motivoErro={motivoErro ? t(motivoErro as any) : undefined}
-          onSelect={() => handleReplaceAttempt(comp.categoria, comp)}
+          motivoErro={conflictReason ? t(conflictReason as any) : undefined}
+          onSelect={() => handleReplaceAttempt(component.categoria, component)}
         />
       );
     });
@@ -433,32 +390,41 @@ export function Builder() {
           </SheetContent>
         </Sheet>
 
-        <AlertDialog open={interception.isOpen} onOpenChange={(o) => setInterception(prev => ({ ...prev, isOpen: o }))}>
+        <AlertDialog open={pendingTopologyAction !== null} onOpenChange={(o) => { if (!o) setPendingTopologyAction(null); }}>
           <AlertDialogContent className="bg-[#1E1E1E] border-white/10 shadow-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-white text-xl">{t('builder.alerts.incompatibilityTitle' as any)}</AlertDialogTitle>
               <AlertDialogDescription className="text-white/60 text-base leading-relaxed">
-                {interception.type === 'REMOVE' 
-                  ? t('builder.messages.msg004' as any).replace('{comp}', selectedComponents[interception.category as ComponentCategory]?.nome_comercial || '').replace('{count}', interception.purgedCategories.length.toString())
-                  : t('builder.messages.msg005' as any).replace('{count}', interception.purgedCategories.length.toString())
-                }
-                <div className="mt-4 p-3 bg-black/40 border border-[#FF3B30]/20 rounded-lg">
-                  <span className="text-xs font-mono text-[#FF3B30] uppercase tracking-wider mb-2 block">{t('builder.alerts.affectedComponents' as any)}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {interception.purgedCategories.map(cat => (
-                      <span key={cat} className="px-2 py-1 bg-[#FF3B30]/10 text-[#FF3B30] rounded text-xs font-medium border border-[#FF3B30]/20">
-                        {selectedComponents[cat]?.nome_comercial || cat}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                {pendingTopologyAction && (
+                  <>
+                    {pendingTopologyAction.type === 'REMOVE' 
+                      ? t('builder.messages.msg004' as any).replace('{comp}', selectedComponents[pendingTopologyAction.targetCategory]?.nome_comercial || '').replace('{count}', pendingTopologyAction.orphanedCategories.length.toString())
+                      : t('builder.messages.msg005' as any).replace('{count}', pendingTopologyAction.orphanedCategories.length.toString())
+                    }
+                    <div className="mt-4 p-3 bg-black/40 border border-[#FF3B30]/20 rounded-lg">
+                      <span className="text-xs font-mono text-[#FF3B30] uppercase tracking-wider mb-2 block">{t('builder.alerts.affectedComponents' as any)}</span>
+                      <div className="flex flex-wrap gap-2">
+                        {pendingTopologyAction.orphanedCategories.map(cat => (
+                          <span key={cat} className="px-2 py-1 bg-[#FF3B30]/10 text-[#FF3B30] rounded text-xs font-medium border border-[#FF3B30]/20">
+                            {selectedComponents[cat]?.nome_comercial || cat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-6 border-t border-white/5 pt-4">
-              <AlertDialogCancel className="bg-transparent text-white border-white/10 hover:bg-white/5">{t('builder.actions.cancel' as any)}</AlertDialogCancel>
+              <AlertDialogCancel 
+                onClick={() => setPendingTopologyAction(null)}
+                className="bg-transparent text-white border-white/10 hover:bg-white/5 cursor-pointer"
+              >
+                {t('builder.actions.cancel' as any)}
+              </AlertDialogCancel>
               <AlertDialogAction 
                 onClick={confirmInterception}
-                className="bg-[#FF3B30] text-white hover:bg-[#FF3B30]/80 shadow-[0_0_15px_rgba(255,59,48,0.2)] hover:shadow-[0_0_25px_rgba(255,59,48,0.4)] border-transparent transition-all"
+                className="bg-[#FF3B30] text-white hover:bg-[#FF3B30]/80 shadow-[0_0_15px_rgba(255,59,48,0.2)] hover:shadow-[0_0_25px_rgba(255,59,48,0.4)] border-transparent transition-all cursor-pointer"
               >
                 {t('builder.actions.confirmPurge' as any)}
               </AlertDialogAction>
