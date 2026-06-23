@@ -24,6 +24,7 @@ import { Componente, ComponentCategory } from "../types/store";
 import { toast } from "sonner";
 import { DataEngineErrorBoundary } from "./ErrorBoundary";
 import { useCatalogEvaluator } from "../lib/engine/useCatalogEvaluator";
+import { mockCuratedBuilds } from "../lib/engine/mockCuratedBuilds";
 
 export function useHydrationGuard() {
   const [hydrated, setHydrated] = React.useState(false);
@@ -88,23 +89,46 @@ export function Builder() {
     if (!hasHydrated) return;
 
     const buildParam = searchParams.get('build');
-    if (!buildParam) return; // Cláusula de guarda imediata
+    const curatedParam = searchParams.get('curated');
 
-    const importedComponents = decodeBuildFromURL(buildParam);
+    if (buildParam) {
+      const importedComponents = decodeBuildFromURL(buildParam);
 
-    if (importedComponents.length === 0 || !validatePayloadIntegrity(importedComponents)) {
-      toast.error(t('MSG-006'));
-      setSearchParams({}, { replace: true });
-      return;
+      if (importedComponents.length === 0 || !validatePayloadIntegrity(importedComponents)) {
+        toast.error(t('MSG-006'));
+        setSearchParams({}, { replace: true });
+        return;
+      }
+
+      if (!isColdStart) {
+        setPendingImportParam(buildParam);
+        setConfirmImportDialogOpen(true);
+      } else {
+        executeImport(buildParam);
+      }
+    } else if (curatedParam) {
+      const curatedBuild = mockCuratedBuilds.find(b => b.id_build_curada === curatedParam);
+      if (curatedBuild) {
+        const componentsMap: Record<ComponentCategory, Componente | null> = {
+          CPU: null, Mobo: null, RAM: null, GPU: null, Storage: null, PSU: null
+        };
+        Object.entries(curatedBuild.matriz_componentes).forEach(([cat, id]) => {
+          if (id) {
+            const comp = CATALOGO_HARDWARE.find(c => c.id === id);
+            if (comp) {
+              componentsMap[cat as ComponentCategory] = comp;
+            }
+          }
+        });
+        const anchor = componentsMap.CPU ? 'CPU' : (componentsMap.Mobo ? 'Mobo' : null);
+        loadPrebuiltSetup(componentsMap, anchor || 'CPU', false);
+        setSearchParams({}, { replace: true });
+        toast.success(t('MSG-028'));
+      } else {
+        setSearchParams({}, { replace: true });
+      }
     }
-
-    if (!isColdStart) {
-      setPendingImportParam(buildParam);
-      setConfirmImportDialogOpen(true);
-    } else {
-      executeImport(buildParam);
-    }
-  }, [searchParams, isColdStart, executeImport, hasHydrated, t, setSearchParams]);
+  }, [searchParams, isColdStart, executeImport, hasHydrated, t, setSearchParams, loadPrebuiltSetup]);
 
   React.useEffect(() => {
     if (hasHydrated && wasFromRecommendation) {

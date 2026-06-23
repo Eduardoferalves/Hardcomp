@@ -1,52 +1,69 @@
-import React from "react";
-import { Link, useNavigate } from "react-router";
-import { ChevronLeft, RefreshCcw } from "lucide-react";
-import { useTranslation } from "../lib/i18n";
-import { useHardCompStore } from "../store/useHardCompStore";
-import { BUILDS_CURADAS, CATALOGO_HARDWARE } from "../lib/engine/mockData";
-import { HardwareTier, Build_Recomendada, ComponentCategory, Componente } from "../types/store";
-import { toast } from "sonner";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { useTranslation } from '../lib/i18n';
+import { useHardCompStore } from '../store/useHardCompStore';
+import { mockCuratedBuilds, BuildRecomendada, PerfilUso } from '../lib/engine/mockCuratedBuilds';
+import { CATALOGO_HARDWARE } from '../lib/engine/mockData';
+import { AlertTriangle, Search, Cpu, ArrowRight, ChevronLeft } from 'lucide-react';
+import { toast } from 'sonner';
+
+type WizardState = 'COLD_INPUT' | 'PROCESSING' | 'EMPTY_STATE' | 'RESULTS_RENDERED';
 
 export function Wizard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [fsmState, setFsmState] = useState<WizardState>('COLD_INPUT');
   
-  const budget = useHardCompStore((state) => state.budget);
-  const setBudget = useHardCompStore((state) => state.setBudget);
-  const loadPrebuiltSetup = useHardCompStore((state) => state.loadPrebuiltSetup);
+  // Inputs
+  const [budget, setBudget] = useState<string>('');
+  const [perfil, setPerfil] = useState<PerfilUso>('GAMER');
+  
+  // Output
+  const [resultBuild, setResultBuild] = useState<BuildRecomendada | null>(null);
 
-  const [activeTier, setActiveTier] = React.useState<HardwareTier>('[ TIER_BASE ]');
+  // Ações globais do Zustand para a Rota de Fuga
+  const setGlobalBudget = useHardCompStore(state => state.setBudget);
 
-  const filteredBuilds = React.useMemo(() => {
-    return BUILDS_CURADAS.filter(b => b.preco_total <= budget && b.hardware_tier === activeTier);
-  }, [budget, activeTier]);
+  const handleSearch = () => {
+    const numBudget = Number(budget);
+    if (!numBudget || numBudget < 500) {
+      toast.error("Insira um valor válido de orçamento (mínimo R$ 500).");
+      return;
+    }
 
-  const handleEject = (build: Build_Recomendada) => {
-    const map: Record<ComponentCategory, Componente | null> = {
-      CPU: null, Mobo: null, RAM: null, GPU: null, Storage: null, PSU: null
-    };
+    setFsmState('PROCESSING');
 
-    build.componentes.forEach(uuid => {
-      const comp = CATALOGO_HARDWARE.find(c => c.id === uuid);
-      if (comp) {
-        map[comp.categoria] = comp;
+    // Simulação de latência de rede/cálculo (SLA de UX)
+    setTimeout(() => {
+      // Motor de Matching Estático (O(N) simples sobre as curadorias, não sobre as peças)
+      const matches = mockCuratedBuilds.filter(b => 
+        b.perfil_uso === perfil && 
+        b.preco_total_cache <= numBudget
+      );
+
+      if (matches.length === 0) {
+        setFsmState('EMPTY_STATE');
+      } else {
+        // Pega a máquina mais próxima do teto do orçamento (Maximizar LTV)
+        const bestMatch = matches.sort((a, b) => b.preco_total_cache - a.preco_total_cache)[0];
+        setResultBuild(bestMatch);
+        setFsmState('RESULTS_RENDERED');
       }
-    });
-
-    const anchor = map.CPU ? 'CPU' : 'Mobo';
-    loadPrebuiltSetup(map, anchor as ComponentCategory, true);
-    navigate('/builder');
+    }, 800);
   };
 
-  const workloads = [
-    { id: 'competitive', tier: '[ TIER_ENTRADA ]' as HardwareTier, title: t('wizard.workload.competitive.title'), tierText: t('wizard.workload.competitive.tier') },
-    { id: 'office', tier: '[ TIER_BASE ]' as HardwareTier, title: t('wizard.workload.office.title'), tierText: t('wizard.workload.office.tier') },
-    { id: 'enthusiast', tier: '[ TIER_ENTUSIASTA ]' as HardwareTier, title: t('wizard.workload.enthusiast.title'), tierText: t('wizard.workload.enthusiast.tier') }
-  ];
+  const handleEjectToBuilder = () => {
+    if (!resultBuild) return;
+    
+    // Injeção de Rota de Fuga (Handoff Topológico)
+    setGlobalBudget(Number(budget));
+    
+    // Redireciona e avisa o usuário (MSG-028)
+    navigate(`/builder?curated=${resultBuild.id_build_curada}`);
+  };
 
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-[#121212] font-sans text-white">
-      
       {/* TOP HEADER */}
       <header className="flex items-center justify-between px-8 py-6 border-b border-white/5 shrink-0 bg-[#121212]">
         <div className="flex-1 flex justify-start">
@@ -66,161 +83,126 @@ export function Wizard() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-hidden px-4 flex justify-center items-center pb-8 pt-4">
-        <div className="w-full max-w-4xl max-h-[calc(100vh-120px)] flex flex-col bg-[#1E1E1E] border border-white/5 shadow-2xl rounded-3xl relative overflow-hidden">
-          
-          <div className="px-8 pt-8 md:px-10 md:pt-10 shrink-0 mb-6">
-            <h2 className="text-3xl font-bold text-white tracking-tight mb-3">
-              {t('wizard.header.title')}
-            </h2>
-            <p className="text-white/50 text-sm leading-relaxed max-w-2xl">
-              {t('wizard.header.subtitle')}
-            </p>
-          </div>
+        <div className="w-full max-w-2xl p-8 bg-[#1E1E1E] border border-white/5 shadow-2xl rounded-3xl relative overflow-hidden flex flex-col">
+          <h2 className="text-2xl font-sans font-bold text-white mb-2">Assistente de Recomendação</h2>
+          <p className="text-white/50 text-sm mb-8">Descubra a máquina ideal baseada estritamente no seu bolso.</p>
 
-          <div className="flex-1 overflow-y-auto space-y-10 pb-4">
-            {/* INPUT SECTION 1: FINANCIAL CONSTRAINT */}
-            <div className="px-8 md:px-10">
-              <div className="flex justify-between items-end mb-4">
-                <label htmlFor="budget-input" className="text-base font-medium text-white/90">
-                  {t('wizard.investment.label')}
-                </label>
-                <div className="flex items-center drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
-                  <span className="font-mono text-4xl font-bold text-white mr-1">R$</span>
-                  <input
-                    id="budget-input"
-                    type="number"
-                    min="0"
-                    max="10000"
-                    value={budget}
-                    onChange={(e) => setBudget(Number(e.target.value))}
-                    className="w-32 bg-transparent text-center text-4xl font-bold font-mono text-white outline-none border-b border-white/10 focus:border-[#007BFF] transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    style={{ MozAppearance: 'textfield' }}
-                  />
-                </div>
-              </div>
-            
-              <div className="relative w-full h-3 bg-black/40 rounded-full overflow-hidden border border-white/10">
-                <div 
-                  className="absolute top-0 left-0 h-full bg-[#007BFF] shadow-[0_0_15px_rgba(0,123,255,0.5)] rounded-full transition-all duration-150 ease-out"
-                  style={{ width: `${(budget / 10000) * 100}%` }}
-                ></div>
-                <input
-                  type="range"
-                  min="0"
-                  max="10000"
-                  step="50"
+          {/* STEP 1: COLD INPUT */}
+          {(fsmState === 'COLD_INPUT' || fsmState === 'EMPTY_STATE') && (
+            <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-mono text-white/40 uppercase tracking-widest">Orçamento Máximo (R$)</label>
+                <input 
+                  type="number" 
                   value={budget}
-                  onChange={(e) => setBudget(Number(e.target.value))}
-                  className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="Ex: 4500"
+                  className="bg-[#121212] border border-white/10 p-4 rounded-lg text-white font-mono text-xl focus:border-[#007BFF] focus:outline-none transition-colors"
                 />
               </div>
-              <div className="flex justify-between text-xs font-mono text-white/30 mt-2">
-                <span>R$ 0</span>
-                <span>R$ 10.000+</span>
-              </div>
-            </div>
 
-            {/* INPUT SECTION 2: USE-CASE MATRIX */}
-            <div className="px-8 md:px-10">
-              <label className="text-base font-medium text-white/90 block mb-5">
-                {t('wizard.workload.label')}
-              </label>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {workloads.map((wl) => {
-                  const isActive = activeTier === wl.tier;
-                  return (
-                    <button 
-                      type="button"
-                      key={wl.id}
-                      onClick={() => setActiveTier(wl.tier)}
-                      className={`relative p-6 rounded-2xl border-2 transition-all cursor-pointer group flex flex-col justify-between text-left focus:outline-none focus:ring-2 focus:ring-[#007BFF] focus:ring-offset-2 focus:ring-offset-[#1E1E1E]
-                        ${isActive 
-                          ? 'border-[#007BFF] bg-[#007BFF]/5 shadow-[0_0_20px_rgba(0,123,255,0.15)]' 
-                          : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'}`}
-                    >
-                      <div>
-                        <h3 className={`text-base font-semibold mb-1 transition-colors ${isActive ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>
-                          {wl.title}
-                        </h3>
-                      </div>
-                      <div className="mt-6">
-                        <span className={`inline-flex font-mono text-xs tracking-wider transition-colors ${isActive ? 'text-[#007BFF] font-medium' : 'text-white/40 group-hover:text-white/60'}`}>
-                          {wl.tierText}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* RESULTS GRID */}
-            <div className="px-8 md:px-10">
-              {filteredBuilds.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredBuilds.map(build => (
-                    <div key={build.id_build_curada} className="p-5 border border-white/10 rounded-2xl bg-white/5 flex flex-col justify-between transition-colors hover:border-[#007BFF]/30">
-                      <h4 className="text-lg font-bold text-white mb-2">{build.nome_build}</h4>
-                      <div className="font-mono font-bold text-xl text-[#007BFF] mb-4">
-                        R$ {build.preco_total.toLocaleString('pt-BR')}
-                      </div>
-                      <div className="text-[11px] font-mono text-white/50 space-y-1 mb-6">
-                        {['CPU', 'GPU', 'PSU'].map(cat => {
-                          const uuid = build.componentes.find(id => {
-                            const c = CATALOGO_HARDWARE.find(x => x.id === id);
-                            return c?.categoria === cat;
-                          });
-                          const comp = CATALOGO_HARDWARE.find(x => x.id === uuid);
-                          return comp ? <div key={comp.id}>• {cat}: {comp.nome_comercial}</div> : null;
-                        })}
-                      </div>
-                      <button 
-                        onClick={() => handleEject(build)}
-                        className="mt-auto w-full px-4 py-3 bg-[#007BFF] hover:bg-[#0056b3] text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer text-center"
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-mono text-white/40 uppercase tracking-widest">Perfil de Uso</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {(['GAMER', 'OFFICE', 'WORKSTATION'] as PerfilUso[]).map((p) => {
+                    const isActive = perfil === p;
+                    return (
+                      <button
+                        type="button"
+                        key={p}
+                        onClick={() => setPerfil(p)}
+                        className={`p-3 rounded-lg border text-sm font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? 'border-[#007BFF] bg-[#007BFF]/10 text-white shadow-[0_0_10px_rgba(0,123,255,0.1)]'
+                            : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                        }`}
                       >
-                        {t('wizard.messages.customize' as any)}
+                        {p}
                       </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-[#FF3B30]/30 rounded-2xl bg-[#FF3B30]/5 text-center">
-                  <span className="text-[#FF3B30] font-mono text-xs font-bold uppercase tracking-wider mb-2">EMPTY_STATE // MSG-023</span>
-                  <p className="text-white/80 text-sm max-w-md font-sans">
-                    {t('MSG-023')}
-                  </p>
+              </div>
+
+              <button 
+                onClick={handleSearch}
+                disabled={Number(budget) < 500}
+                className="w-full py-4 bg-[#007BFF] hover:bg-[#0056b3] disabled:opacity-50 disabled:hover:bg-[#007BFF] text-white rounded-lg font-bold transition-all flex justify-center items-center gap-2 cursor-pointer"
+              >
+                <Search className="w-5 h-5" /> Buscar Configuração
+              </button>
+
+              {/* STEP 2: EMPTY STATE (Poka-Yoke) */}
+              {fsmState === 'EMPTY_STATE' && (
+                <div className="mt-4 p-4 border border-[#FF3B30]/20 bg-[#FF3B30]/10 rounded-lg flex gap-3 items-start">
+                  <AlertTriangle className="w-5 h-5 text-[#FF3B30] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-[#FF3B30] font-bold text-sm">Orçamento Insuficiente</h4>
+                    <p className="text-[#FF3B30]/80 text-xs mt-1 font-mono">{t('MSG-023')}</p>
+                  </div>
                 </div>
               )}
             </div>
+          )}
 
-          </div>
+          {/* STEP 3: PROCESSING */}
+          {fsmState === 'PROCESSING' && (
+            <div className="py-20 flex flex-col items-center justify-center space-y-4 animate-in fade-in">
+              <Cpu className="w-10 h-10 text-[#007BFF] animate-pulse" />
+              <p className="text-white/60 font-mono text-xs tracking-widest uppercase">Varrendo Catálogo Curado...</p>
+            </div>
+          )}
 
-          {/* BOTTOM ACTION BAR */}
-          <div className="px-8 pb-8 pt-6 md:px-10 md:pb-10 md:pt-6 mt-auto border-t border-white/10 shrink-0 flex flex-col md:flex-row items-center justify-between gap-6 bg-[#1E1E1E]">
-            <button 
-              onClick={() => {
-                setBudget(850);
-                setActiveTier('[ TIER_BASE ]');
-              }}
-              className="flex items-center gap-2 text-sm font-medium text-white/40 hover:text-white transition-colors group"
-            >
-              <RefreshCcw className="w-4 h-4 group-hover:-rotate-90 transition-transform duration-300" />
-              {t('wizard.actions.reset')}
-            </button>
-            
-            <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-              <div className={`text-[11px] font-mono tracking-wider ${filteredBuilds.length > 0 ? 'text-green-400' : 'text-[#FF3B30]'}`}>
-                {filteredBuilds.length > 0 
-                  ? t('wizard.messages.matchesFound' as any, { count: filteredBuilds.length })
-                  : t('MSG-023')}
+          {/* STEP 4: RESULTS RENDERED */}
+          {fsmState === 'RESULTS_RENDERED' && resultBuild && (
+            <div className="space-y-6 animate-in slide-in-from-bottom-4 fade-in duration-500">
+              <div className="p-5 border border-emerald-500/20 bg-emerald-500/5 rounded-xl">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    {resultBuild.is_sponsored && <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-1 rounded font-bold uppercase tracking-wider mb-2 inline-block">Patrocinado</span>}
+                    <h3 className="text-xl font-bold text-white">{resultBuild.nome_comercial}</h3>
+                    <p className="text-emerald-400 font-mono text-sm mt-1">Garante compatibilidade total.</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-mono font-bold text-white">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(resultBuild.preco_total_cache)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Read-Only Specs Preview */}
+                <div className="grid grid-cols-2 gap-2 mt-6">
+                  {Object.entries(resultBuild.matriz_componentes).map(([cat, id]) => {
+                    if (!id) return null;
+                    const comp = CATALOGO_HARDWARE.find(c => c.id === id);
+                    return (
+                      <div key={cat} className="p-2 bg-[#121212] rounded border border-white/5 flex flex-col">
+                        <span className="text-[9px] font-mono text-white/40 uppercase">{cat}</span>
+                        <span className="text-xs text-white truncate">{comp?.nome_comercial || 'Indisponível'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setFsmState('COLD_INPUT')}
+                  className="px-6 py-3 border border-white/10 text-white/70 hover:text-white hover:bg-white/5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                >
+                  Refazer Busca
+                </button>
+                <button 
+                  onClick={handleEjectToBuilder}
+                  className="flex-1 py-3 bg-[#007BFF] hover:bg-[#0056b3] text-white rounded-lg text-sm font-bold transition-all flex justify-center items-center gap-2 cursor-pointer"
+                >
+                  Personalizar no Montador <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          </div>
-
+          )}
         </div>
       </main>
-
     </div>
   );
 }
