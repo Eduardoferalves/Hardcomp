@@ -147,7 +147,7 @@ export function Builder() {
     return <div className="w-screen h-screen bg-[#121212] animate-pulse" />;
   }
 
-  const handleRemoveAttempt = (catId: ComponentCategory) => {
+  const handleRemoveAttempt = React.useCallback((catId: ComponentCategory) => {
     const purges = getCascadingPurge(useHardCompStore.getState(), { type: 'REMOVE', category: catId });
     if (purges.length > 0) {
       setPendingTopologyAction({
@@ -159,9 +159,9 @@ export function Builder() {
     } else {
       applyChange({ type: 'REMOVE', category: catId }, []);
     }
-  };
+  }, [setPendingTopologyAction, applyChange]);
 
-  const handleReplaceAttempt = (catId: ComponentCategory, comp: Componente) => {
+  const handleReplaceAttempt = React.useCallback((catId: ComponentCategory, comp: Componente) => {
     const purges = getCascadingPurge(useHardCompStore.getState(), { type: 'REPLACE', category: catId, newComponent: comp });
     if (purges.length > 0) {
       setPendingTopologyAction({
@@ -175,12 +175,12 @@ export function Builder() {
       applyChange({ type: 'REPLACE', category: catId, newComponent: comp }, []);
       setSheetOpen(false);
     }
-  };
+  }, [setPendingTopologyAction, applyChange, setSheetOpen]);
 
-  const handleOpenInventory = (catId: ComponentCategory) => {
+  const handleOpenInventory = React.useCallback((catId: ComponentCategory) => {
     setActiveSheetCategory(catId);
     setSheetOpen(true);
-  };
+  }, [setActiveSheetCategory, setSheetOpen]);
 
   const renderInventory = () => {
     if (!activeSheetCategory) return null;
