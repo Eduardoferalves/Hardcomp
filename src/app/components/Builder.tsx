@@ -48,17 +48,6 @@ export function Builder() {
   const setWasFromRecommendation = useHardCompStore((state) => state.setWasFromRecommendation);
 
   const [sheetOpen, setSheetOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (hasHydrated && wasFromRecommendation) {
-      toast.success(t('MSG-028'));
-      setWasFromRecommendation(false);
-    }
-  }, [hasHydrated, wasFromRecommendation, setWasFromRecommendation, t]);
-
-  if (!hasHydrated) {
-    return <div className="w-screen h-screen bg-[#121212] animate-pulse" />;
-  }
   const [activeSheetCategory, setActiveSheetCategory] = React.useState<ComponentCategory | null>(null);
 
   const [interception, setInterception] = React.useState<{
@@ -115,6 +104,13 @@ export function Builder() {
     }
   }, [searchParams, isColdStart, executeImport, hasHydrated]);
 
+  React.useEffect(() => {
+    if (hasHydrated && wasFromRecommendation) {
+      toast.success(t('MSG-028'));
+      setWasFromRecommendation(false);
+    }
+  }, [hasHydrated, wasFromRecommendation, setWasFromRecommendation, t]);
+
   const handleConfirmImport = () => {
     if (pendingImportParam) {
       executeImport(pendingImportParam);
@@ -128,6 +124,10 @@ export function Builder() {
     setConfirmImportDialogOpen(false);
     setSearchParams({});
   };
+
+  if (!hasHydrated) {
+    return <div className="w-screen h-screen bg-[#121212] animate-pulse" />;
+  }
 
   const allCategories = [
     { id: "CPU", label: t('builder.categories.selectProcessor'), icon: Cpu },
