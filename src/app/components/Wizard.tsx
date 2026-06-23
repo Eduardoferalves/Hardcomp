@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useTranslation } from '../lib/i18n';
 import { useHardCompStore } from '../store/useHardCompStore';
@@ -26,31 +26,35 @@ export function Wizard() {
 
   const handleSearch = () => {
     const numBudget = Number(budget);
-    if (!numBudget || numBudget < 500) {
-      toast.error("Insira um valor válido de orçamento (mínimo R$ 500).");
+    if (!budget || isNaN(numBudget) || numBudget < 500) {
+      toast.error(t('wizard.errors.invalidBudget' as any));
       return;
     }
 
     setFsmState('PROCESSING');
-
-    // Simulação de latência de rede/cálculo (SLA de UX)
-    setTimeout(() => {
-      // Motor de Matching Estático (O(N) simples sobre as curadorias, não sobre as peças)
-      const matches = mockCuratedBuilds.filter(b => 
-        b.perfil_uso === perfil && 
-        b.preco_total_cache <= numBudget
-      );
-
-      if (matches.length === 0) {
-        setFsmState('EMPTY_STATE');
-      } else {
-        // Pega a máquina mais próxima do teto do orçamento (Maximizar LTV)
-        const bestMatch = matches.sort((a, b) => b.preco_total_cache - a.preco_total_cache)[0];
-        setResultBuild(bestMatch);
-        setFsmState('RESULTS_RENDERED');
-      }
-    }, 800);
   };
+
+  useEffect(() => {
+    if (fsmState === 'PROCESSING') {
+      const timer = setTimeout(() => {
+        const numBudget = Number(budget);
+        const matches = mockCuratedBuilds.filter(b => 
+          b.perfil_uso === perfil && 
+          b.preco_total_cache <= numBudget
+        );
+
+        if (matches.length === 0) {
+          setFsmState('EMPTY_STATE');
+        } else {
+          const bestMatch = matches.sort((a, b) => b.preco_total_cache - a.preco_total_cache)[0];
+          setResultBuild(bestMatch);
+          setFsmState('RESULTS_RENDERED');
+        }
+      }, 800);
+
+      return () => clearTimeout(timer);
+    }
+  }, [fsmState, budget, perfil]);
 
   const handleEjectToBuilder = () => {
     if (!resultBuild) return;
@@ -84,14 +88,14 @@ export function Wizard() {
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-hidden px-4 flex justify-center items-center pb-8 pt-4">
         <div className="w-full max-w-2xl p-8 bg-[#1E1E1E] border border-white/5 shadow-2xl rounded-3xl relative overflow-hidden flex flex-col">
-          <h2 className="text-2xl font-sans font-bold text-white mb-2">Assistente de Recomendação</h2>
-          <p className="text-white/50 text-sm mb-8">Descubra a máquina ideal baseada estritamente no seu bolso.</p>
+          <h2 className="text-2xl font-sans font-bold text-white mb-2">{t('wizard.title' as any)}</h2>
+          <p className="text-white/50 text-sm mb-8">{t('wizard.subtitle' as any)}</p>
 
           {/* STEP 1: COLD INPUT */}
           {(fsmState === 'COLD_INPUT' || fsmState === 'EMPTY_STATE') && (
             <div className="space-y-6 animate-in fade-in zoom-in duration-300">
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-mono text-white/40 uppercase tracking-widest">Orçamento Máximo (R$)</label>
+                <label className="text-xs font-mono text-white/40 uppercase tracking-widest">{t('wizard.inputs.budgetLabel' as any)}</label>
                 <input 
                   type="number" 
                   value={budget}
@@ -102,7 +106,7 @@ export function Wizard() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-mono text-white/40 uppercase tracking-widest">Perfil de Uso</label>
+                <label className="text-xs font-mono text-white/40 uppercase tracking-widest">{t('wizard.inputs.profileLabel' as any)}</label>
                 <div className="grid grid-cols-3 gap-3">
                   {(['GAMER', 'OFFICE', 'WORKSTATION'] as PerfilUso[]).map((p) => {
                     const isActive = perfil === p;
@@ -126,10 +130,10 @@ export function Wizard() {
 
               <button 
                 onClick={handleSearch}
-                disabled={Number(budget) < 500}
+                disabled={!budget || isNaN(Number(budget)) || Number(budget) < 500}
                 className="w-full py-4 bg-[#007BFF] hover:bg-[#0056b3] disabled:opacity-50 disabled:hover:bg-[#007BFF] text-white rounded-lg font-bold transition-all flex justify-center items-center gap-2 cursor-pointer"
               >
-                <Search className="w-5 h-5" /> Buscar Configuração
+                <Search className="w-5 h-5" /> {t('wizard.actions.search' as any)}
               </button>
 
               {/* STEP 2: EMPTY STATE (Poka-Yoke) */}
@@ -137,7 +141,7 @@ export function Wizard() {
                 <div className="mt-4 p-4 border border-[#FF3B30]/20 bg-[#FF3B30]/10 rounded-lg flex gap-3 items-start">
                   <AlertTriangle className="w-5 h-5 text-[#FF3B30] shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-[#FF3B30] font-bold text-sm">Orçamento Insuficiente</h4>
+                    <h4 className="text-[#FF3B30] font-bold text-sm">{t('wizard.errors.budgetInsufficientTitle' as any)}</h4>
                     <p className="text-[#FF3B30]/80 text-xs mt-1 font-mono">{t('MSG-023')}</p>
                   </div>
                 </div>
@@ -149,7 +153,7 @@ export function Wizard() {
           {fsmState === 'PROCESSING' && (
             <div className="py-20 flex flex-col items-center justify-center space-y-4 animate-in fade-in">
               <Cpu className="w-10 h-10 text-[#007BFF] animate-pulse" />
-              <p className="text-white/60 font-mono text-xs tracking-widest uppercase">Varrendo Catálogo Curado...</p>
+              <p className="text-white/60 font-mono text-xs tracking-widest uppercase">{t('wizard.states.processing' as any)}</p>
             </div>
           )}
 
@@ -159,9 +163,9 @@ export function Wizard() {
               <div className="p-5 border border-emerald-500/20 bg-emerald-500/5 rounded-xl">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    {resultBuild.is_sponsored && <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-1 rounded font-bold uppercase tracking-wider mb-2 inline-block">Patrocinado</span>}
+                    {resultBuild.is_sponsored && <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-1 rounded font-bold uppercase tracking-wider mb-2 inline-block">{t('wizard.badges.sponsored' as any)}</span>}
                     <h3 className="text-xl font-bold text-white">{resultBuild.nome_comercial}</h3>
-                    <p className="text-emerald-400 font-mono text-sm mt-1">Garante compatibilidade total.</p>
+                    <p className="text-emerald-400 font-mono text-sm mt-1">{t('wizard.results.guarantee' as any)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-mono font-bold text-white">
@@ -178,7 +182,7 @@ export function Wizard() {
                     return (
                       <div key={cat} className="p-2 bg-[#121212] rounded border border-white/5 flex flex-col">
                         <span className="text-[9px] font-mono text-white/40 uppercase">{cat}</span>
-                        <span className="text-xs text-white truncate">{comp?.nome_comercial || 'Indisponível'}</span>
+                        <span className="text-xs text-white truncate">{comp?.nome_comercial || t('wizard.results.unavailable' as any)}</span>
                       </div>
                     );
                   })}
@@ -190,13 +194,13 @@ export function Wizard() {
                   onClick={() => setFsmState('COLD_INPUT')}
                   className="px-6 py-3 border border-white/10 text-white/70 hover:text-white hover:bg-white/5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
                 >
-                  Refazer Busca
+                  {t('wizard.actions.retry' as any)}
                 </button>
                 <button 
                   onClick={handleEjectToBuilder}
                   className="flex-1 py-3 bg-[#007BFF] hover:bg-[#0056b3] text-white rounded-lg text-sm font-bold transition-all flex justify-center items-center gap-2 cursor-pointer"
                 >
-                  Personalizar no Montador <ArrowRight className="w-4 h-4" />
+                  {t('wizard.actions.customize' as any)} <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>

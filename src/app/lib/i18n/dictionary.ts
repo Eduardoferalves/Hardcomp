@@ -277,7 +277,30 @@ export const dictionary = {
     },
     actions: {
       reset: "Redefinir Parâmetros",
-      query: "Consultar Montagens Validadas"
+      query: "Consultar Montagens Validadas",
+      search: "Buscar Configuração",
+      retry: "Refazer Busca",
+      customize: "Personalizar no Montador"
+    },
+    title: "Assistente de Recomendação",
+    subtitle: "Descubra a máquina ideal baseada estritamente no seu bolso.",
+    inputs: {
+      budgetLabel: "Orçamento Máximo (R$)",
+      profileLabel: "Perfil de Uso"
+    },
+    errors: {
+      budgetInsufficientTitle: "Orçamento Insuficiente",
+      invalidBudget: "Insira um valor válido de orçamento (mínimo R$ 500)."
+    },
+    states: {
+      processing: "Varrendo Catálogo Curado..."
+    },
+    badges: {
+      sponsored: "Patrocinado"
+    },
+    results: {
+      guarantee: "Garante compatibilidade total.",
+      unavailable: "Indisponível"
     }
   }
 } as const;
