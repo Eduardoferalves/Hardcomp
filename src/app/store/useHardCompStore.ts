@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useMemo } from "react";
-import { HardCompState, ComponentCategory, Componente, TopologicalIntercept } from "../types/store";
+import { HardCompState, ComponentCategory, Componente, TopologicalIntercept, AuditLog } from "../types/store";
 import { checkSocket, checkRamGeneration, checkPowerLimit } from "../lib/engine/specification";
 import { CATALOGO_HARDWARE } from "../lib/engine/mockData";
 
@@ -9,6 +9,7 @@ const EVICTION_DAYS = 7;
 const DEFAULT_BUDGET = 850;
 
 const getInitialState = () => ({
+  auditLogs: [] as AuditLog[],
   selectedComponents: {
     CPU: null,
     Mobo: null,
@@ -51,8 +52,15 @@ export const useHardCompStore = create<HardCompState>()(
       },
 
       clearBuild: () => {
-        set(() => getInitialState());
+        set((state) => ({ ...getInitialState(), auditLogs: state.auditLogs }));
+        get().addAuditLog('CLEAR_BUILD', 'Estado Resetado');
       },
+
+      addAuditLog: (action, diff) => set((state) => {
+        const newLog = { timestamp: new Date().toISOString(), action, diff };
+        const newLogs = [newLog, ...state.auditLogs].slice(0, 10);
+        return { auditLogs: newLogs };
+      }),
 
       hydrateStore: () => {
         const state = get();
@@ -65,6 +73,7 @@ export const useHardCompStore = create<HardCompState>()(
           if (diffDays > EVICTION_DAYS) {
             console.warn("MSG-039: Eviction Policy Triggered. Store payload expired.");
             get().clearBuild();
+            get().addAuditLog('EVICTION', 'Payload Expirado');
             return;
           }
         }
@@ -90,6 +99,9 @@ export const useHardCompStore = create<HardCompState>()(
 
         if (hasChanges) {
           set({ selectedComponents: newComps });
+          get().addAuditLog('REHYDRATE', 'Catálogo Reconciliado');
+        } else {
+          get().addAuditLog('REHYDRATE', 'Sem Alterações');
         }
       },
 
@@ -132,6 +144,8 @@ export const useHardCompStore = create<HardCompState>()(
             anchor = 'Mobo';
           }
         }
+        
+        get().addAuditLog('CONFIRM_TOPOLOGY_ACTION', `Tipo: ${type}, Categoria: ${targetCategory}`);
         
         return { 
           selectedComponents: newSelection, 
@@ -178,6 +192,8 @@ export const useHardCompStore = create<HardCompState>()(
           }
         }
 
+        get().addAuditLog('APPLY_CHANGE', `Tipo: ${action.type}, Categoria: ${action.category}`);
+
         return {
           selectedComponents: nextComps,
           isColdStart: isCold,
@@ -201,7 +217,12 @@ if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
     if (event.key === 'hardcomp-storage') {
       useHardCompStore.persist.rehydrate();
+      useHardCompStore.getState().addAuditLog('SYNC_CROSS_TAB', 'Reidratação Forçada');
       window.dispatchEvent(new Event('APP_SYNC_TRIGGERED'));
     }
   });
+
+  (window as any).HardComp = {
+    audit: () => console.table(useHardCompStore.getState().auditLogs)
+  };
 }

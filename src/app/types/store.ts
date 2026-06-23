@@ -28,7 +28,15 @@ export interface TopologicalIntercept {
   orphans: ComponentCategory[]; // Peças que serão invalidadas (alias)
 }
 
+export interface AuditLog {
+  timestamp: string;
+  action: string;
+  diff: string;
+}
+
 export interface HardCompState {
+  auditLogs: AuditLog[];
+  addAuditLog: (action: string, diff: string) => void;
   selectedComponents: Record<ComponentCategory, Componente | null>;
   anchorComponent: ComponentCategory | null;
   isColdStart: boolean;
