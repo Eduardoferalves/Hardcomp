@@ -21,6 +21,7 @@ export function ReactiveMetricsBar() {
   const isColdStart = useHardCompStore(state => state.isColdStart);
   const selectedComponents = useHardCompStore(state => state.selectedComponents);
   const setBudget = useHardCompStore(state => state.setBudget);
+  const isOffline = useHardCompStore(state => state.isOffline);
 
   const [localBudget, setLocalBudget] = React.useState(budget.toString());
 
@@ -38,7 +39,7 @@ export function ReactiveMetricsBar() {
   };
 
   const isError = (!isBuildValid && errorMessage) || isOverBudget;
-  const isShareEnabled = isBuildValid && !isColdStart && !isOverBudget;
+  const isShareEnabled = isBuildValid && !isColdStart && !isOverBudget && !isOffline;
 
   // Cálculo da porcentagem de consumo frente ao limite de 80% da PSU
   const tdpPercentage = psuTargetLimit > 0 ? Math.min((totalTDP / psuTargetLimit) * 100, 100) : 0;
@@ -118,7 +119,13 @@ export function ReactiveMetricsBar() {
 
         {/* Seção 2: Mensagens de Erro Unificadas e Ação de Ejeção/Compartilhamento */}
         <div className="flex items-center gap-6">
-          {isOverBudget && (
+          {isOffline && (
+            <div className="text-xs font-mono flex items-center gap-2 text-[#FF3B30] bg-[#FF3B30]/10 px-4 py-2 rounded-lg border border-[#FF3B30]/20 animate-pulse">
+              <AlertTriangle className="w-4 h-4" />
+              SISTEMA OFFLINE: PREÇOS NÃO SINCRONIZADOS
+            </div>
+          )}
+          {isOverBudget && !isOffline && (
             <div className="text-xs font-mono flex items-center gap-2 text-[#FF3B30] bg-[#FF3B30]/10 px-4 py-2 rounded-lg border border-[#FF3B30]/20 animate-pulse">
               <AlertTriangle className="w-4 h-4" />
               ORÇAMENTO EXCEDIDO

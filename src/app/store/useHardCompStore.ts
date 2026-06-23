@@ -8,8 +8,14 @@ import { CATALOGO_HARDWARE } from "../lib/engine/mockData";
 const EVICTION_DAYS = 7;
 const DEFAULT_BUDGET = 850;
 
+const CATALOGO_MAP = CATALOGO_HARDWARE.reduce((acc, curr) => {
+  acc[curr.id] = curr;
+  return acc;
+}, {} as Record<string, Componente>);
+
 const getInitialState = () => ({
   auditLogs: [] as AuditLog[],
+  isOffline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
   selectedComponents: {
     CPU: null,
     Mobo: null,
@@ -62,8 +68,15 @@ export const useHardCompStore = create<HardCompState>()(
         return { auditLogs: newLogs };
       }),
 
+      setIsOffline: (status) => set({ isOffline: status }),
+
       hydrateStore: () => {
         const state = get();
+        if (state.isOffline || Object.keys(CATALOGO_MAP).length === 0) {
+          get().addAuditLog('REHYDRATE_OFFLINE', 'Modo Degradado: Mantendo Cache Local');
+          return;
+        }
+
         if (state.timestamp) {
           const storedDate = new Date(state.timestamp);
           const currentDate = new Date();
@@ -85,7 +98,7 @@ export const useHardCompStore = create<HardCompState>()(
         (Object.keys(newComps) as ComponentCategory[]).forEach(cat => {
           const comp = newComps[cat];
           if (comp) {
-            const freshComp = CATALOGO_HARDWARE.find(c => c.id === comp.id);
+            const freshComp = CATALOGO_MAP[comp.id]; // O(1) Lookup
             if (freshComp) {
               newComps[cat] = freshComp;
               hasChanges = true;
@@ -220,6 +233,15 @@ export const useHardCompStore = create<HardCompState>()(
 );
 
 if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    useHardCompStore.getState().setIsOffline(false);
+    useHardCompStore.persist.rehydrate();
+  });
+  
+  window.addEventListener('offline', () => {
+    useHardCompStore.getState().setIsOffline(true);
+  });
+
   window.addEventListener('storage', (event) => {
     if (event.key === 'hardcomp-storage') {
       useHardCompStore.persist.rehydrate();

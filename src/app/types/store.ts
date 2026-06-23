@@ -37,6 +37,8 @@ export interface AuditLog {
 export interface HardCompState {
   auditLogs: AuditLog[];
   addAuditLog: (action: string, diff: string) => void;
+  isOffline: boolean;
+  setIsOffline: (status: boolean) => void;
   selectedComponents: Record<ComponentCategory, Componente | null>;
   anchorComponent: ComponentCategory | null;
   isColdStart: boolean;
