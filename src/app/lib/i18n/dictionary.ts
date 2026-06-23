@@ -228,7 +228,8 @@ export const dictionary = {
       msg004: "MSG-004: Atenção! Remover a peça {comp} tornará {count} componente(s) dependente(s) incompatível(is).",
       msg005: "MSG-005: Atenção! Substituir esta peça causará um conflito topológico com {count} componente(s) já instalado(s).",
       shareSuccess: "Link copiado para a área de transferência.",
-      importError: "O link da configuração está corrompido ou é inválido."
+      importError: "O link da configuração está corrompido ou é inválido.",
+      syncCrossTab: "Sincronização de ambiente: Configuração alterada em outra aba."
     },
     recovery: {
       systemMode: "[SISTEMA EM MODO DE RECOVERY]",

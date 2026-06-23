@@ -3,6 +3,8 @@ import { persist } from "zustand/middleware";
 import { useMemo } from "react";
 import { HardCompState, ComponentCategory, Componente, TopologicalIntercept } from "../types/store";
 import { checkSocket, checkRamGeneration, checkPowerLimit } from "../lib/engine/specification";
+import { toast } from "sonner";
+import { dictionary } from "../lib/i18n/dictionary";
 
 const EVICTION_DAYS = 7;
 const DEFAULT_BUDGET = 850;
@@ -172,3 +174,11 @@ export const useHardCompStore = create<HardCompState>()(
   )
 );
 
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'hardcomp-storage') {
+      useHardCompStore.persist.rehydrate();
+      toast.info(dictionary.builder.messages.syncCrossTab);
+    }
+  });
+}
