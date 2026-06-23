@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '../../lib/i18n';
-import { useHardCompStore, useBuildMetrics } from '../../store/useHardCompStore';
+import { useHardCompStore } from '../../store/useHardCompStore';
+import { useBuildMetrics } from '../../hooks/useBuildMetrics';
 import { encodeBuildToURL } from '../../lib/engine/serializer';
 import { toast } from 'sonner';
 import { AlertTriangle, DollarSign, Zap } from 'lucide-react';

@@ -2,31 +2,9 @@ import React from "react";
 import { Link } from "react-router";
 import { PlusSquare, RefreshCw, Wand2, ChevronRight } from "lucide-react";
 import { useTranslation } from "../lib/i18n";
-import { useHardCompStore } from "../store/useHardCompStore";
-import { toast } from "sonner";
 
 export function Hub() {
   const { t } = useTranslation();
-  const selectedComponents = useHardCompStore((state) => state.selectedComponents);
-  const timestamp = useHardCompStore((state) => state.timestamp);
-  const clearBuild = useHardCompStore((state) => state.clearBuild);
-
-  React.useEffect(() => {
-    if (timestamp) {
-      const storedDate = new Date(timestamp);
-      const currentDate = new Date();
-      const diffTime = Math.abs(currentDate.getTime() - storedDate.getTime());
-      const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-      // Check if there is at least one selected component to identify a saved setup
-      const hasSavedSetup = Object.values(selectedComponents).some((comp) => comp !== null);
-
-      if (diffDays > 7 && hasSavedSetup) {
-        clearBuild();
-        toast.warning(t('MSG-039'));
-      }
-    }
-  }, [timestamp, selectedComponents, clearBuild, t]);
   return (
     <div className="flex-1 flex flex-col container mx-auto px-6 py-12">
       <div className="mb-12">
