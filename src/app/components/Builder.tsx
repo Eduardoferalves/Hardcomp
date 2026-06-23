@@ -283,32 +283,57 @@ export function Builder() {
           </div>
         </main>
 
-        {/* AREA 2: RIGHT SIDEBAR (Architecture Graph) */}
+        {/* AREA 2: RIGHT SIDEBAR (Architecture Topological Graph mapping) */}
         <aside className="w-[300px] shrink-0 bg-[#18181B] border-l border-white/5 flex flex-col">
           <div className="p-6 border-b border-white/5">
-            <h2 className="text-lg font-semibold text-white mb-2">{t('builder.sidebar.title')}</h2>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-white/40 mb-2">
+              {t('builder.sidebar.title')}
+            </h2>
             <div className={`inline-flex items-center px-2 py-1 rounded font-mono text-[10px] tracking-widest border transition-colors ${anchorComponent ? 'bg-[#007BFF]/10 text-[#007BFF] border-[#007BFF]/20' : 'bg-white/5 text-[#A1A1AA] border-white/10'}`}>
-              {anchorComponent ? t('builder.graph.initialized' as any) : t('builder.badges.graphUninitialized')}
+              {anchorComponent ? `ENGINE_LIVE // ANCHOR: ${anchorComponent}` : t('builder.badges.graphUninitialized')}
             </div>
           </div>
           
-          <div className="flex-1 p-6 flex flex-col gap-3 overflow-y-auto">
-            {allCategories.map((cat) => {
+          {/* Renderização Estruturada com Linhas de Fluxo de Dependência Física */}
+          <div className="flex-1 p-6 flex flex-col items-center gap-1 overflow-y-auto">
+            {allCategories.map((cat, index) => {
               const selectedComp = selectedComponents[cat.id as ComponentCategory];
+              
               return (
-                <div 
-                  key={cat.id}
-                  className={`w-full py-4 px-4 border rounded-xl flex flex-col items-center justify-center transition-all ${
-                    selectedComp 
-                      ? 'border-[#007BFF]/50 bg-[#007BFF]/5 shadow-[0_0_15px_rgba(0,123,255,0.1)]' 
-                      : 'border-dashed border-white/20 bg-transparent'
-                  }`}
-                >
-                   <span className={`text-sm font-medium transition-colors ${selectedComp ? 'text-white' : 'text-white/30'}`}>{cat.label}</span>
-                   <span className={`text-[10px] font-mono mt-1 uppercase transition-colors ${selectedComp ? 'text-[#007BFF]' : 'text-white/20'}`}>
-                     {selectedComp ? selectedComp.nome_comercial : t('builder.badges.pendingInput')}
-                   </span>
-                </div>
+                <React.Fragment key={cat.id}>
+                  {/* Card do Nó do Grafo */}
+                  <div 
+                    className={`w-full py-3 px-4 border rounded-xl flex flex-col transition-all duration-300 ${
+                      selectedComp 
+                        ? 'border-[#007BFF]/40 bg-[#007BFF]/5 shadow-[0_0_15px_rgba(0,123,255,0.05)]' 
+                        : 'border-dashed border-white/10 bg-transparent opacity-60'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className={`text-xs font-sans font-medium ${selectedComp ? 'text-white' : 'text-white/40'}`}>
+                        {cat.label}
+                      </span>
+                      {selectedComp && (
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono uppercase">
+                          OK
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-mono mt-1 uppercase truncate tracking-wide ${selectedComp ? 'text-[#007BFF] font-semibold' : 'text-white/20'}`}>
+                      {selectedComp ? selectedComp.nome_comercial : '• PENDING_INPUT'}
+                    </span>
+                  </div>
+
+                  {/* Renderizador de Aresta Relacional (Edge Indicator) - Não renderiza no último elemento */}
+                  {index < allCategories.length - 1 && (
+                    <div className="h-4 w-0.5 bg-gradient-to-b from-white/10 to-white/5 relative my-0.5">
+                      {/* Se ambas as pontas da relação crítica estiverem preenchidas, destaca a linha de fluxo */}
+                      {selectedComponents[cat.id as ComponentCategory] && selectedComponents[allCategories[index+1].id as ComponentCategory] && (
+                        <div className="absolute inset-0 bg-[#007BFF] animate-pulse" />
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
